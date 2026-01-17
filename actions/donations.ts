@@ -5,6 +5,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 interface ActionResult {
@@ -12,10 +13,49 @@ interface ActionResult {
   error?: string;
 }
 
+interface CharityInfo {
+  id: string;
+  name: string;
+  description?: string;
+  logo?: string;
+  imageUrl?: string;
+}
+
 interface CharityGoal {
   charityId: string;
+  charityInfo?: CharityInfo;
   goalAmount: number;
   priority?: number;
+}
+
+/**
+ * Ensure charities exist in our local database
+ * This handles GlobalGiving charities that might not be in our DB yet
+ */
+async function ensureCharitiesExist(charities: CharityInfo[]): Promise<void> {
+  if (charities.length === 0) return;
+
+  const upserts = charities.map((c) => ({
+    id: c.id,
+    name: c.name,
+    description: c.description || null,
+    logo: c.logo || "🌍",
+    logo_url: c.imageUrl || null,
+    is_active: true,
+  }));
+
+  console.log("[ensureCharitiesExist] Upserting charities:", upserts.map(c => ({ id: c.id, name: c.name })));
+
+  // Use admin client to bypass RLS
+  const { error } = await supabaseAdmin
+    .from("charities")
+    .upsert(upserts, { onConflict: "id" });
+
+  if (error) {
+    console.error("[ensureCharitiesExist] Error upserting charities:", error);
+  } else {
+    console.log("[ensureCharitiesExist] Charities upserted successfully");
+  }
 }
 
 /**
@@ -35,37 +75,59 @@ export async function saveCharityGoals(
     return { success: false, error: "Unauthorized" };
   }
 
-  // Delete existing user_charities for this user (fresh start on each onboarding)
-  await supabase.from("user_charities").delete().eq("user_id", user.id);
+  try {
+    console.log("[saveCharityGoals] Starting save for user:", user.id);
+    console.log("[saveCharityGoals] Goals count:", goals.length);
 
-  // Insert new charity goals with priority based on order
-  const inserts = goals.map((goal, index) => ({
-    user_id: user.id,
-    charity_id: goal.charityId,
-    goal_amount: goal.goalAmount,
-    current_amount: 0,
-    priority: goal.priority || index + 1,
-    is_completed: false,
-  }));
+    // Delete existing user_charities for this user (fresh start on each onboarding)
+    const { error: deleteError } = await supabaseAdmin.from("user_charities").delete().eq("user_id", user.id);
+    if (deleteError) {
+      console.error("[saveCharityGoals] Error deleting existing user_charities:", deleteError);
+    }
 
-  const { error } = await supabase.from("user_charities").insert(inserts);
+    // Insert new charity goals with priority and denormalized charity info
+    const inserts = goals.map((goal, index) => ({
+      user_id: user.id,
+      charity_id: goal.charityId,
+      charity_name: goal.charityInfo?.name || "Unknown Charity",
+      charity_logo: goal.charityInfo?.logo || "🎯",
+      charity_image_url: goal.charityInfo?.imageUrl || null,
+      goal_amount: goal.goalAmount,
+      current_amount: 0,
+      priority: goal.priority || index + 1,
+      is_completed: false,
+    }));
 
-  if (error) {
-    return { success: false, error: error.message };
+    console.log("[saveCharityGoals] Inserting user_charities:", inserts);
+
+    const { error } = await supabaseAdmin.from("user_charities").insert(inserts);
+
+    if (error) {
+      console.error("[saveCharityGoals] Error inserting user_charities:", error);
+      return { success: false, error: error.message };
+    }
+    
+    console.log("[saveCharityGoals] user_charities inserted successfully");
+
+    // Set the first charity as the selected one and mark onboarding started
+    if (goals.length > 0) {
+      await supabaseAdmin
+        .from("profiles")
+        .update({ 
+          selected_charity_id: goals[0].charityId,
+          roundup_enabled: true,
+        })
+        .eq("id", user.id);
+    }
+
+    revalidatePath("/onboarding/goals");
+    revalidatePath("/dashboard");
+
+    return { success: true };
+  } catch (error) {
+    console.error("saveCharityGoals error:", error);
+    return { success: false, error: "Failed to save charity goals" };
   }
-
-  // Set the first charity as the selected one on the profile
-  if (goals.length > 0) {
-    await supabase
-      .from("profiles")
-      .update({ selected_charity_id: goals[0].charityId })
-      .eq("id", user.id);
-  }
-
-  revalidatePath("/onboarding/goals");
-  revalidatePath("/dashboard");
-
-  return { success: true };
 }
 
 /**
@@ -85,42 +147,66 @@ export async function saveDonationMode(
     return { success: false, error: "Unauthorized" };
   }
 
-  // Update donation_mode on profile
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({
-      donation_mode: mode,
-      selected_charity_id: goals[0]?.charityId,
-    })
-    .eq("id", user.id);
+  try {
+    console.log("[saveDonationMode] Starting save for user:", user.id);
+    console.log("[saveDonationMode] Mode:", mode);
+    console.log("[saveDonationMode] Goals count:", goals.length);
 
-  if (profileError) {
-    return { success: false, error: profileError.message };
+    // Update donation_mode on profile
+    console.log("[saveDonationMode] Updating profile...");
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .update({
+        donation_mode: mode,
+        selected_charity_id: goals[0]?.charityId,
+        roundup_enabled: true,
+      })
+      .eq("id", user.id);
+
+    if (profileError) {
+      console.error("[saveDonationMode] Error updating profile:", profileError);
+      return { success: false, error: profileError.message };
+    }
+    console.log("[saveDonationMode] Profile updated");
+
+    // Delete existing user_charities for this user
+    const { error: deleteError } = await supabaseAdmin.from("user_charities").delete().eq("user_id", user.id);
+    if (deleteError) {
+      console.error("[saveDonationMode] Error deleting user_charities:", deleteError);
+    }
+
+    // Insert new charity goals with priority and denormalized charity info
+    const inserts = goals.map((goal, index) => ({
+      user_id: user.id,
+      charity_id: goal.charityId,
+      charity_name: goal.charityInfo?.name || "Unknown Charity",
+      charity_logo: goal.charityInfo?.logo || "🎯",
+      charity_image_url: goal.charityInfo?.imageUrl || null,
+      goal_amount: goal.goalAmount,
+      current_amount: 0,
+      priority: goal.priority || index + 1,
+      is_completed: false,
+    }));
+
+    console.log("[saveDonationMode] Inserting user_charities:", inserts);
+
+    const { error } = await supabaseAdmin.from("user_charities").insert(inserts);
+
+    if (error) {
+      console.error("[saveDonationMode] Error inserting user_charities:", error);
+      return { success: false, error: error.message };
+    }
+    
+    console.log("[saveDonationMode] user_charities inserted successfully");
+
+    revalidatePath("/onboarding/donation-mode");
+    revalidatePath("/dashboard");
+
+    return { success: true };
+  } catch (error) {
+    console.error("saveDonationMode error:", error);
+    return { success: false, error: "Failed to save donation mode" };
   }
-
-  // Delete existing user_charities for this user
-  await supabase.from("user_charities").delete().eq("user_id", user.id);
-
-  // Insert new charity goals with priority
-  const inserts = goals.map((goal, index) => ({
-    user_id: user.id,
-    charity_id: goal.charityId,
-    goal_amount: goal.goalAmount,
-    current_amount: 0,
-    priority: goal.priority || index + 1,
-    is_completed: false,
-  }));
-
-  const { error } = await supabase.from("user_charities").insert(inserts);
-
-  if (error) {
-    return { success: false, error: error.message };
-  }
-
-  revalidatePath("/onboarding/donation-mode");
-  revalidatePath("/dashboard");
-
-  return { success: true };
 }
 
 /**

@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { mockCharities, type Charity } from "@/lib/charities/data";
 
-// Re-export for backward compatibility
-export { mockCharities, type Charity } from "@/lib/charities/data";
+export interface Charity {
+  id: string;
+  name: string;
+  description: string;
+  logo: string;
+  imageUrl?: string;
+}
 
 interface CharityPickerProps {
   selected: Charity[];
@@ -12,7 +16,7 @@ interface CharityPickerProps {
 }
 
 export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
-  const [charities, setCharities] = useState(mockCharities);
+  const [charities, setCharities] = useState<Charity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,7 +25,8 @@ export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
 
     async function loadCharities() {
       try {
-        const response = await fetch("/api/globalgiving/featured");
+        // Fetch from our Supabase charities table
+        const response = await fetch("/api/charities");
         if (!response.ok) {
           throw new Error("Failed to load charities");
         }
@@ -52,16 +57,31 @@ export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
 
   if (loading) {
     return (
-      <div className="text-center text-sm text-gray-500">
-        Loading charities...
+      <div className="text-center py-8">
+        <div className="animate-pulse text-gray-500">Loading charities...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center text-sm text-red-500">
+      <div className="text-center py-8 text-red-500">
         {error}
+        <br />
+        <button 
+          onClick={() => window.location.reload()} 
+          className="mt-2 text-sm text-emerald-600 hover:underline"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  if (charities.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        No charities available. Please check back later.
       </div>
     );
   }

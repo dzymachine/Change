@@ -2,11 +2,18 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { mockCharities, type Charity } from "@/lib/charities/data";
+import type { Charity } from "@/components/onboarding/CharityPicker";
 import { saveCharityGoals } from "@/actions/donations";
 
 interface CharityGoal {
   charityId: string;
+  charityInfo?: {
+    id: string;
+    name: string;
+    description?: string;
+    logo?: string;
+    imageUrl?: string;
+  };
   goalAmount: number;
 }
 
@@ -56,7 +63,8 @@ export default function OnboardingGoalsPage() {
 
     const loadFromIds = async (ids: string[]) => {
       try {
-        const response = await fetch("/api/globalgiving/featured");
+        // Fetch charities from our Supabase endpoint
+        const response = await fetch("/api/charities");
         if (response.ok) {
           const data = await response.json();
           const fromApi = Array.isArray(data.charities)
@@ -68,19 +76,11 @@ export default function OnboardingGoalsPage() {
           }
         }
       } catch {
-        // Fall back to mock data
+        // If API fails, redirect back to charity selection
       }
 
-      const fallback = ids
-        .map((id) => mockCharities.find((c) => c.id === id))
-        .filter((c): c is Charity => c !== undefined);
-
       if (isMounted) {
-        if (fallback.length === 0) {
-          router.push("/onboarding/charities");
-          return;
-        }
-        setSelectedCharities(fallback);
+        router.push("/onboarding/charities");
       }
     };
 
@@ -127,10 +127,20 @@ export default function OnboardingGoalsPage() {
 
     setError(null);
 
-    // Save the goal
-    const newGoals = [
+    // Save the goal with full charity info for upsert
+    const newGoals: CharityGoal[] = [
       ...goals,
-      { charityId: currentCharity.id, goalAmount: amount },
+      { 
+        charityId: currentCharity.id, 
+        charityInfo: {
+          id: currentCharity.id,
+          name: currentCharity.name,
+          description: currentCharity.description,
+          logo: currentCharity.logo,
+          imageUrl: currentCharity.imageUrl,
+        },
+        goalAmount: amount 
+      },
     ];
     setGoals(newGoals);
 

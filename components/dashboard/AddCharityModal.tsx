@@ -1,7 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { mockCharities } from "@/lib/mock-data";
+import { useState, useTransition, useEffect } from "react";
+
+interface Charity {
+  id: string;
+  name: string;
+  description: string;
+  logo: string;
+}
 
 interface AddCharityModalProps {
   isOpen: boolean;
@@ -19,8 +25,30 @@ export function AddCharityModal({
   const [selectedCharity, setSelectedCharity] = useState<string | null>(null);
   const [goalAmount, setGoalAmount] = useState<string>("5.00");
   const [isPending, startTransition] = useTransition();
+  const [charities, setCharities] = useState<Charity[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const availableCharities = mockCharities.filter(
+  useEffect(() => {
+    if (!isOpen) return;
+
+    async function fetchCharities() {
+      try {
+        const response = await fetch("/api/charities");
+        if (response.ok) {
+          const data = await response.json();
+          setCharities(data.charities || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch charities:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchCharities();
+  }, [isOpen]);
+
+  const availableCharities = charities.filter(
     (c) => !existingCharityIds.includes(c.id)
   );
 
@@ -67,44 +95,37 @@ export function AddCharityModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
-          {availableCharities.length === 0 ? (
+          {loading ? (
+            <p className="text-center text-gray-500 py-8">Loading charities...</p>
+          ) : availableCharities.length === 0 ? (
             <p className="text-center text-gray-500 py-8">
               You&apos;ve added all available charities!
             </p>
           ) : (
             <div className="space-y-2">
-              {availableCharities.map((charity) => {
-                const initials = charity.name
-                  .split(" ")
-                  .map((w) => w[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase();
-
-                return (
-                  <button
-                    key={charity.id}
-                    onClick={() => setSelectedCharity(charity.id)}
-                    className={`w-full p-4 rounded-xl border text-left transition-all ${
-                      selectedCharity === charity.id
-                        ? "border-emerald-500 bg-emerald-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm font-medium text-gray-600">
-                        {initials}
-                      </div>
-                      <div>
-                        <p className="font-medium text-black">{charity.name}</p>
-                        <p className="text-sm text-gray-500">
-                          {charity.description}
-                        </p>
-                      </div>
+              {availableCharities.map((charity) => (
+                <button
+                  key={charity.id}
+                  onClick={() => setSelectedCharity(charity.id)}
+                  className={`w-full p-4 rounded-xl border text-left transition-all ${
+                    selectedCharity === charity.id
+                      ? "border-emerald-500 bg-emerald-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-xl">
+                      {charity.logo}
                     </div>
-                  </button>
-                );
-              })}
+                    <div>
+                      <p className="font-medium text-black">{charity.name}</p>
+                      <p className="text-sm text-gray-500">
+                        {charity.description}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              ))}
             </div>
           )}
 
