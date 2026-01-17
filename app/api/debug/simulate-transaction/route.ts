@@ -31,30 +31,38 @@ export async function POST(request: NextRequest) {
     const roundupAmount = calculateRoundup(amount);
 
     // Check if user has a linked account (create mock one if not)
+    const mockItemId = `mock_item_${user.id}`;
+
+    // Use maybeSingle() to avoid errors when user has multiple linked accounts
     let { data: linkedAccount } = await supabaseAdmin
       .from("linked_accounts")
       .select("id")
       .eq("user_id", user.id)
-      .single();
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (!linkedAccount) {
-      // Create a mock linked account for testing
+      // Create (or reuse) a mock linked account for testing (plaid_item_id is unique)
       const { data: newAccount, error: createError } = await supabaseAdmin
         .from("linked_accounts")
-        .insert({
+        .upsert({
           user_id: user.id,
-          plaid_item_id: `mock_item_${user.id}`,
+          plaid_item_id: mockItemId,
           plaid_access_token: "mock_access_token",
           institution_name: "Mock Bank (Sandbox)",
           institution_id: "mock_bank",
           is_active: true,
-        })
+        }, { onConflict: "plaid_item_id" })
         .select("id")
         .single();
 
       if (createError) {
         return NextResponse.json(
-          { error: "Failed to create mock account", details: createError },
+          {
+            error: "Failed to create mock account",
+            details: createError.message || createError,
+          },
           { status: 500 }
         );
       }
@@ -201,10 +209,11 @@ export async function GET() {
       progress: `${((parseFloat(c.current_amount) / parseFloat(c.goal_amount)) * 100).toFixed(1)}%`,
       is_completed: c.is_completed,
     })),
-    recent_transactions: transactions?.map((t) => ({
-      merchant: t.merchant_name,
-      amount: parseFloat(t.amount).toFixed(2),
-      roundup: parseFloat(t.roundup_amount).toFixed(2),
+    recent_transactions: transactions?.map((t, index) => ({
+      id: t.id || `tx_${index}`,
+      merchant_name: t.merchant_name || "Unknown",
+      amount: parseFloat(t.amount) || 0,
+      roundup_amount: parseFloat(t.roundup_amount) || 0,
       donated_to: t.donated_to_charity_id,
       processed: t.processed_for_donation,
       date: t.date,

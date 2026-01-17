@@ -5,8 +5,9 @@ import { useState } from "react";
 interface CharityCardProps {
   id: string;
   name: string;
+  logo?: string;
   location?: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
   goalAmount: number;
   currentAmount: number;
   priority: number;
@@ -25,8 +26,9 @@ interface CharityCardProps {
 export function CharityCard({
   id,
   name,
-  location = "Santa Cruz",
+  logo,
   imageUrl,
+  location = "Santa Cruz",
   goalAmount,
   currentAmount,
   isCompleted,
@@ -42,7 +44,11 @@ export function CharityCard({
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [editGoal, setEditGoal] = useState(goalAmount.toFixed(2));
 
-  const progress = goalAmount > 0 ? Math.min((currentAmount / goalAmount) * 100, 100) : 0;
+  const clampedCurrentAmount =
+    goalAmount > 0 ? Math.min(currentAmount, goalAmount) : currentAmount;
+
+  const progress =
+    goalAmount > 0 ? (clampedCurrentAmount / goalAmount) * 100 : 0;
   const progressPercent = Math.round(progress);
 
   const initials = name
@@ -51,6 +57,8 @@ export function CharityCard({
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+  const hasImage = typeof imageUrl === "string" && imageUrl.length > 0;
 
   // Generate a consistent color based on the charity name
   const colors = [
@@ -108,7 +116,7 @@ export function CharityCard({
 
         {/* Header with image placeholder */}
         <div className="w-full h-20 rounded-lg bg-gradient-to-br from-gray-100 to-gray-50 mb-3 flex items-center justify-center overflow-hidden">
-          {imageUrl ? (
+          {hasImage ? (
             <img
               src={imageUrl}
               alt={name}
@@ -116,9 +124,9 @@ export function CharityCard({
             />
           ) : (
             <div
-              className={`w-12 h-12 rounded-full ${color.bg} ${color.text} flex items-center justify-center text-base font-bold ${color.border} border-2`}
+              className={`w-12 h-12 rounded-full ${color.bg} ${color.text} flex items-center justify-center text-2xl font-bold ${color.border} border-2`}
             >
-              {initials}
+              {logo || initials}
             </div>
           )}
         </div>
@@ -130,9 +138,7 @@ export function CharityCard({
         {/* Progress bar */}
         <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-2 mt-auto">
           <div
-            className={`h-full rounded-full ${
-              isCompleted ? "bg-emerald-500" : color.bar
-            }`}
+            className="h-full rounded-full bg-emerald-500"
             style={{ 
               width: `${progress}%`,
               transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
@@ -143,7 +149,7 @@ export function CharityCard({
         {/* Progress info */}
         <div className="flex items-center justify-between text-xs">
           <span className="text-gray-600 font-medium">{progressPercent}%</span>
-          <span className="text-black font-semibold">${currentAmount.toFixed(2)} / ${goalAmount.toFixed(2)}</span>
+          <span className="text-black font-semibold">${clampedCurrentAmount.toFixed(2)} / ${goalAmount.toFixed(2)}</span>
         </div>
 
         {/* Remove button */}
@@ -178,19 +184,19 @@ export function CharityCard({
       {/* Header row */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full overflow-hidden border">
-            {imageUrl ? (
+          <div
+            className={`w-10 h-10 rounded-full overflow-hidden border flex items-center justify-center ${
+              hasImage ? "" : `${color.bg} ${color.text}`
+            }`}
+          >
+            {hasImage ? (
               <img
                 src={imageUrl}
                 alt={name}
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div
-                className={`w-full h-full ${color.bg} ${color.text} flex items-center justify-center text-sm font-semibold ${color.border} border`}
-              >
-                {initials}
-              </div>
+              <span className="text-lg font-semibold">{logo || initials}</span>
             )}
           </div>
           <div>
@@ -253,26 +259,24 @@ export function CharityCard({
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-3">
-        <div
-          className={`h-full rounded-full transition-all duration-300 ${
-            isCompleted ? "bg-emerald-500" : "bg-black"
-          }`}
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+        {/* Progress bar */}
+        <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-3">
+          <div
+            className="h-full rounded-full transition-all duration-300 bg-emerald-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
 
       {/* Progress details - matching reference layout */}
       <div className="flex items-end justify-between">
         <span className="text-sm text-black">
-          ${currentAmount.toFixed(2)} toward ${goalAmount.toFixed(2)}
+          ${clampedCurrentAmount.toFixed(2)} toward ${goalAmount.toFixed(2)}
         </span>
         <div className="flex gap-6 text-right">
           <div>
             <p className="text-xs text-gray-500">Progress</p>
             <p className="font-semibold text-black">
-              ${currentAmount.toFixed(2)}
+              ${clampedCurrentAmount.toFixed(2)}
             </p>
           </div>
           <div>

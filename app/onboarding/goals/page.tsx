@@ -203,7 +203,7 @@ export default function OnboardingGoalsPage() {
         <p className="text-sm text-emerald-600 font-medium">
           Step 2 of {totalSteps}
         </p>
-        <h1 className="text-3xl font-bold">Set your goals</h1>
+        <h1 className="text-3xl font-bold text-black">Set your goals</h1>
         <p className="text-gray-500 max-w-md mx-auto">
           Set a donation goal for each charity. This helps you track your
           giving progress.
@@ -265,7 +265,7 @@ export default function OnboardingGoalsPage() {
                   onChange={(e) => setCurrentGoal(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="100"
-                  className="w-full pl-10 pr-4 py-3 text-2xl text-center border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-colors"
+                  className="w-full pl-10 pr-4 py-3 text-2xl text-center border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-colors text-black"
                   disabled={isSaving}
                 />
               </div>

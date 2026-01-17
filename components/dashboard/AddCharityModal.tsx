@@ -100,7 +100,7 @@ export function AddCharityModal({
       />
       <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-lg font-semibold">Add Charity</h2>
+          <h2 className="text-lg font-semibold text-black">Add Charity</h2>
           <button
             onClick={onClose}
             className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
@@ -182,7 +182,7 @@ export function AddCharityModal({
                   onChange={(e) => setGoalAmount(e.target.value)}
                   min="1"
                   step="0.01"
-                  className="w-full pl-7 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full pl-7 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-black"
                 />
               </div>
             </div>

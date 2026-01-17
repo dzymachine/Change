@@ -45,7 +45,7 @@ export default function OnboardingCharitiesPage() {
         <p className="text-sm text-emerald-600 font-medium">
           Step 1 of {totalSteps}
         </p>
-        <h1 className="text-3xl font-bold">Choose your charities</h1>
+        <h1 className="text-3xl font-bold text-black">Choose your charities</h1>
         <p className="text-gray-500 max-w-md mx-auto">
           Select up to 5 charities that will receive your round-up
           donations. You can change this anytime.

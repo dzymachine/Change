@@ -60,12 +60,19 @@ export async function GET() {
         { status: 502 }
       );
     }
-    const rawProjects: GlobalGivingProject[] =
-      data?.projects?.project ?? data?.project ?? [];
-    const projects = Array.isArray(rawProjects)
-      ? rawProjects
-      : rawProjects
-        ? [rawProjects]
+
+    const root: Record<string, unknown> =
+      data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+
+    const projectsNode =
+      (root.projects as Record<string, unknown> | undefined)?.project ??
+      root.project ??
+      [];
+
+    const projects = Array.isArray(projectsNode)
+      ? (projectsNode as GlobalGivingProject[])
+      : projectsNode
+        ? ([projectsNode] as GlobalGivingProject[])
         : [];
 
     const pickImageUrl = (value: unknown): string | undefined => {

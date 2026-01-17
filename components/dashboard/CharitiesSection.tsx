@@ -137,9 +137,9 @@ export function CharitiesSection({
   const existingCharityIds = charities.map((c) => c.charityId);
 
   return (
-    <div className="bg-white border rounded-xl p-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-black">Your Charities</h2>
           <p className="text-sm text-gray-500">
@@ -224,7 +224,8 @@ export function CharitiesSection({
             key={charity.id}
             id={charity.id}
             name={charity.name}
-            imageUrl={charity.imageUrl || undefined}
+            logo={charity.logo}
+            imageUrl={charity.imageUrl}
             goalAmount={charity.goalAmount}
             currentAmount={charity.currentAmount}
             priority={charity.priority}

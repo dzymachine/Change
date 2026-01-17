@@ -40,7 +40,7 @@ export function TransactionList({ showAll = false }: TransactionListProps) {
 
   if (loading) {
     return (
-      <div className="bg-white border rounded-xl p-8 text-center">
+      <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
         <p className="text-gray-500">Loading transactions...</p>
       </div>
     );
@@ -50,7 +50,7 @@ export function TransactionList({ showAll = false }: TransactionListProps) {
 
   if (displayTransactions.length === 0) {
     return (
-      <div className="bg-white border rounded-xl p-8 text-center">
+      <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
         <p className="text-gray-600">No transactions yet</p>
         <p className="text-sm text-gray-500 mt-1">
           Simulate a transaction to see your round-ups in action
@@ -60,9 +60,9 @@ export function TransactionList({ showAll = false }: TransactionListProps) {
   }
 
   return (
-    <div className="bg-white border rounded-xl divide-y">
-      {displayTransactions.map((tx) => (
-        <div key={tx.id} className="p-4 flex items-center justify-between">
+    <div className="bg-white rounded-2xl shadow-sm divide-y">
+      {displayTransactions.map((tx, index) => (
+        <div key={tx.id || `transaction-${index}`} className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-lg font-medium text-black">
               {(tx.merchant_name || "?")[0]}
@@ -73,9 +73,9 @@ export function TransactionList({ showAll = false }: TransactionListProps) {
             </div>
           </div>
           <div className="text-right">
-            <p className="font-medium text-black">{formatCurrency(tx.amount)}</p>
+            <p className="font-medium text-black">{formatCurrency(tx.amount || 0)}</p>
             <p className="text-sm text-emerald-600 font-medium">
-              +{formatCurrency(tx.roundup_amount)} round-up
+              +{formatCurrency(tx.roundup_amount || 0)} round-up
             </p>
           </div>
         </div>

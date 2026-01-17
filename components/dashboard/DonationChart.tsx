@@ -75,6 +75,11 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
   const createPath = (data: number[]) => {
     if (data.length < 2) return "";
 
+    const fmt = (value: number) => {
+      if (!Number.isFinite(value)) return "0";
+      return value.toFixed(3);
+    };
+
     const width = 800;
     const height = 200;
     const padding = 20;
@@ -88,14 +93,14 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
       return { x, y };
     });
 
-    let path = `M ${points[0].x} ${points[0].y}`;
+    let path = `M ${fmt(points[0].x)} ${fmt(points[0].y)}`;
 
     for (let i = 1; i < points.length; i++) {
       const prev = points[i - 1];
       const curr = points[i];
       const cpx1 = prev.x + (curr.x - prev.x) / 3;
       const cpx2 = prev.x + (2 * (curr.x - prev.x)) / 3;
-      path += ` C ${cpx1} ${prev.y}, ${cpx2} ${curr.y}, ${curr.x} ${curr.y}`;
+      path += ` C ${fmt(cpx1)} ${fmt(prev.y)}, ${fmt(cpx2)} ${fmt(curr.y)}, ${fmt(curr.x)} ${fmt(curr.y)}`;
     }
 
     return path;
@@ -109,7 +114,7 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
     const height = 200;
     const padding = 20;
 
-    return `${linePath} L ${width - padding} ${height - padding} L ${padding} ${height - padding} Z`;
+    return `${linePath} L ${(width - padding).toFixed(3)} ${(height - padding).toFixed(3)} L ${padding.toFixed(3)} ${(height - padding).toFixed(3)} Z`;
   };
 
   const handleSimulate = async () => {
@@ -163,7 +168,7 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
 
   return (
     <>
-      <div className="bg-white border rounded-xl p-6">
+      <div className="bg-white rounded-2xl shadow-sm p-6">
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-sm text-gray-500 mb-1">Total donated</p>
@@ -237,7 +242,7 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
             onClick={() => !isSimulating && setShowAmountModal(false)}
           />
           <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
-            <h3 className="text-lg font-semibold mb-4">Simulate a Transaction</h3>
+            <h3 className="text-lg font-semibold mb-4 text-black">Simulate a Transaction</h3>
             
             <div className="space-y-4">
               <div>
@@ -254,7 +259,7 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
                     onChange={(e) => setAmount(e.target.value)}
                     min="0.01"
                     step="0.01"
-                    className="w-full pl-7 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none"
+                    className="w-full pl-7 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-black"
                     placeholder="25.47"
                     disabled={isSimulating}
                   />
@@ -270,7 +275,7 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
                   <button
                     key={quickAmount}
                     onClick={() => setAmount(quickAmount.toString())}
-                    className="flex-1 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex-1 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors text-black"
                     disabled={isSimulating}
                   >
                     ${quickAmount}

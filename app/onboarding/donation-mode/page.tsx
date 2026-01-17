@@ -200,7 +200,7 @@ export default function OnboardingDonationModePage() {
         <p className="text-sm text-emerald-600 font-medium">
           Step 3 of {totalSteps}
         </p>
-        <h1 className="text-3xl font-bold">How should we distribute?</h1>
+        <h1 className="text-3xl font-bold text-black">How should we distribute?</h1>
         <p className="text-gray-500 max-w-md mx-auto">
           Choose how your donations are distributed across your selected
           charities.
@@ -221,7 +221,7 @@ export default function OnboardingDonationModePage() {
           <div className="flex items-start gap-4">
             <span className="text-3xl">🎲</span>
             <div className="flex-1">
-              <p className="font-semibold text-lg">Random</p>
+              <p className="font-semibold text-lg text-black">Random</p>
               <p className="text-sm text-gray-500 mt-1">
                 Each donation is randomly assigned to one of your charities.
                 Great for supporting all causes equally over time.
@@ -245,7 +245,7 @@ export default function OnboardingDonationModePage() {
           <div className="flex items-start gap-4">
             <span className="text-3xl">📊</span>
             <div className="flex-1">
-              <p className="font-semibold text-lg">Priority Queue</p>
+              <p className="font-semibold text-lg text-black">Priority Queue</p>
               <p className="text-sm text-gray-500 mt-1">
                 Donations go to your #1 charity until its goal is met, then move
                 to #2, and so on.
@@ -262,7 +262,7 @@ export default function OnboardingDonationModePage() {
       {mode === "priority" && (
         <div className="space-y-4">
           <div className="text-center">
-            <h2 className="text-lg font-semibold">Rank your charities</h2>
+            <h2 className="text-lg font-semibold text-black">Rank your charities</h2>
             <p className="text-sm text-gray-500">
               Drag to reorder. Donations fill goals from top to bottom.
             </p>

@@ -11,6 +11,8 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 interface AllocationResult {
   success: boolean;
   charityId?: string;
+  allocations?: { charityId: string; amount: number }[];
+  unallocatedAmount?: number;
   error?: string;
 }
 
@@ -21,6 +23,16 @@ interface UserCharity {
   current_amount: number;
   priority: number;
   is_completed: boolean;
+}
+
+function roundToCents(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function toNumber(value: unknown): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") return parseFloat(value);
+  return Number(value);
 }
 
 /**
@@ -59,32 +71,87 @@ export async function allocateRoundupToCharity(
     return { success: false, error: "No active charities found" };
   }
 
-  // Select charity based on mode
-  let selectedCharity: UserCharity;
+  const mode = (profile.donation_mode === "random" ? "random" : "priority") as
+    | "random"
+    | "priority";
 
-  if (profile.donation_mode === "random") {
-    // Random mode: pick a random charity
-    const randomIndex = Math.floor(Math.random() * userCharities.length);
-    selectedCharity = userCharities[randomIndex];
+  let remaining = roundToCents(toNumber(roundupAmount));
+  const allocations: { charityId: string; amount: number }[] = [];
+
+  const updateCharity = async (
+    charity: UserCharity,
+    addAmount: number
+  ): Promise<{ newCurrent: number; isCompleted: boolean }> => {
+    const goal = Math.max(0, roundToCents(toNumber(charity.goal_amount)));
+    const current = Math.max(0, roundToCents(toNumber(charity.current_amount)));
+
+    const needed = Math.max(0, roundToCents(goal - current));
+    const allocated = Math.max(0, Math.min(roundToCents(addAmount), needed));
+    const newCurrent = roundToCents(current + allocated);
+    const cappedCurrent = Math.min(newCurrent, goal);
+    const isCompleted = cappedCurrent >= goal && goal > 0;
+
+    const { error: updateError } = await supabaseAdmin
+      .from("user_charities")
+      .update({
+        current_amount: cappedCurrent,
+        is_completed: isCompleted,
+      })
+      .eq("id", charity.id);
+
+    if (updateError) {
+      throw new Error("Failed to update charity amount");
+    }
+
+    return { newCurrent: cappedCurrent, isCompleted };
+  };
+
+  // Allocate without overfilling goals:
+  // - priority: cascade through charities in priority order
+  // - random: try random charities until the amount is allocated or we run out
+  if (mode === "priority") {
+    for (const charity of userCharities) {
+      if (remaining <= 0) break;
+
+      const goal = Math.max(0, roundToCents(toNumber(charity.goal_amount)));
+      const current = Math.max(0, roundToCents(toNumber(charity.current_amount)));
+      const needed = Math.max(0, roundToCents(goal - current));
+      if (needed <= 0) continue;
+
+      const allocateAmount = Math.min(remaining, needed);
+      await updateCharity(charity, allocateAmount);
+
+      allocations.push({ charityId: charity.charity_id, amount: allocateAmount });
+      remaining = roundToCents(remaining - allocateAmount);
+    }
   } else {
-    // Priority mode: pick the first non-completed charity (highest priority)
-    selectedCharity = userCharities[0];
+    const available = [...userCharities];
+    while (remaining > 0 && available.length > 0) {
+      const randomIndex = Math.floor(Math.random() * available.length);
+      const charity = available[randomIndex];
+
+      const goal = Math.max(0, roundToCents(toNumber(charity.goal_amount)));
+      const current = Math.max(0, roundToCents(toNumber(charity.current_amount)));
+      const needed = Math.max(0, roundToCents(goal - current));
+      if (needed <= 0) {
+        available.splice(randomIndex, 1);
+        continue;
+      }
+
+      const allocateAmount = Math.min(remaining, needed);
+      const { isCompleted } = await updateCharity(charity, allocateAmount);
+
+      allocations.push({ charityId: charity.charity_id, amount: allocateAmount });
+      remaining = roundToCents(remaining - allocateAmount);
+
+      if (isCompleted) {
+        available.splice(randomIndex, 1);
+      }
+    }
   }
 
-  // Update the charity's current_amount
-  const newAmount = parseFloat(selectedCharity.current_amount.toString()) + roundupAmount;
-  const isNowCompleted = newAmount >= parseFloat(selectedCharity.goal_amount.toString());
-
-  const { error: updateError } = await supabaseAdmin
-    .from("user_charities")
-    .update({
-      current_amount: newAmount,
-      is_completed: isNowCompleted,
-    })
-    .eq("id", selectedCharity.id);
-
-  if (updateError) {
-    return { success: false, error: "Failed to update charity amount" };
+  if (allocations.length === 0) {
+    return { success: false, error: "No active charities found" };
   }
 
   // Mark transaction as processed
@@ -92,31 +159,34 @@ export async function allocateRoundupToCharity(
     .from("transactions")
     .update({
       processed_for_donation: true,
-      donated_to_charity_id: selectedCharity.charity_id,
+      donated_to_charity_id: allocations[0].charityId,
     })
     .eq("id", transactionId);
 
-  // If this charity is now completed in priority mode, update selected_charity_id
-  if (isNowCompleted && profile.donation_mode === "priority") {
-    // Find next priority charity
-    const nextCharity = userCharities.find(
-      (c) => c.id !== selectedCharity.id && !c.is_completed
-    );
-    if (nextCharity) {
+  // In priority mode, keep selected_charity_id pointing at the highest-priority active charity.
+  if (mode === "priority") {
+    const { data: nextActive } = await supabaseAdmin
+      .from("user_charities")
+      .select("charity_id")
+      .eq("user_id", userId)
+      .eq("is_completed", false)
+      .order("priority", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (nextActive?.charity_id) {
       await supabaseAdmin
         .from("profiles")
-        .update({ selected_charity_id: nextCharity.charity_id })
+        .update({ selected_charity_id: nextActive.charity_id })
         .eq("id", userId);
-      
-      console.log(
-        `Charity ${selectedCharity.charity_id} goal completed! Moving to next: ${nextCharity.charity_id}`
-      );
     }
   }
 
   return {
     success: true,
-    charityId: selectedCharity.charity_id,
+    charityId: allocations[0].charityId,
+    allocations,
+    unallocatedAmount: remaining > 0 ? remaining : undefined,
   };
 }
 

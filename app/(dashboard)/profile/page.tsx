@@ -16,22 +16,8 @@ export default async function ProfilePage() {
     0
   ) || 0;
 
-  // Fetch recent donations
-  const { data: donations } = await supabase
-    .from("donations")
-    .select(`
-      id,
-      amount,
-      status,
-      created_at,
-      charity:charities(name)
-    `)
-    .eq("user_id", user?.id)
-    .order("created_at", { ascending: false })
-    .limit(10);
-
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 max-w-3xl mx-auto">
       <div>
         <h1 className="text-3xl font-bold text-black">Profile</h1>
         <p className="text-gray-600 mt-1">
@@ -73,39 +59,6 @@ export default async function ProfilePage() {
             <p className="text-sm text-emerald-700 mt-1">donated to charity</p>
           </div>
         </div>
-
-        {donations && donations.length > 0 ? (
-          <div className="bg-white border rounded-xl divide-y">
-            {donations.map((donation) => {
-              const charityData = donation.charity as { name: string } | null;
-              return (
-                <div key={donation.id} className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-black">
-                      {charityData?.name || "Unknown Charity"}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {new Date(donation.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-black">
-                      ${parseFloat(String(donation.amount)).toFixed(2)}
-                    </p>
-                    <p className="text-xs text-gray-500 capitalize">{donation.status}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="bg-white border rounded-xl p-8 text-center">
-            <p className="text-gray-600">No donation history yet</p>
-            <p className="text-sm text-gray-500 mt-1">
-              Your donation batches will appear here
-            </p>
-          </div>
-        )}
       </section>
     </div>
   );
