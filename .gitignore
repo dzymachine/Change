@@ -21,3 +21,6 @@ Thumbs.db
 .turbo/
 
 *.tsbuildinfo
+
+# Local AI context
+isaiah/
