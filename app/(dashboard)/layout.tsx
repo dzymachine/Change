@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { DashboardNav } from "@/components/dashboard/DashboardNav";
+import { TopNav } from "@/components/dashboard/TopNav";
 
 // Note: Middleware handles onboarding redirects, but we keep auth check here for defense in depth
 
@@ -30,9 +30,9 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen flex">
-      <DashboardNav user={user} />
-      <main className="flex-1 p-6 lg:p-8">{children}</main>
+    <div className="min-h-screen bg-gray-50">
+      <TopNav />
+      <main className="max-w-6xl mx-auto px-6 py-8">{children}</main>
     </div>
   );
 }
