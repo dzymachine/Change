@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { quickLogin } from "@/actions/user";
 
 export function AuthLanding() {
   const supabase = createClient();
@@ -14,6 +15,17 @@ export function AuthLanding() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  const handleQuickLogin = (loginMode: "onboarding" | "dashboard") => {
+    setError(null);
+    startTransition(async () => {
+      const result = await quickLogin(loginMode);
+      if (result && "error" in result && result.error) {
+        setError(result.error);
+      }
+    });
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,7 +57,13 @@ export function AuthLanding() {
         return;
       }
 
-      router.push("/dashboard");
+      // Refresh to trigger server-side middleware which checks onboarding status
+      // and redirects appropriately (to /dashboard or /onboarding/charities)
+      router.refresh();
+      // Small delay to ensure cookies are set before navigation
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 100);
       return;
     }
 
@@ -53,7 +71,9 @@ export function AuthLanding() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/onboarding/charities`,
+        // After email confirmation, user will be redirected here
+        // Middleware will then redirect to onboarding since onboarding_completed is false
+        emailRedirectTo: `${window.location.origin}/`,
       },
     });
 
@@ -184,7 +204,7 @@ export function AuthLanding() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || isPending}
           className="w-full py-2 px-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
         >
           {loading
@@ -196,6 +216,33 @@ export function AuthLanding() {
               : "Create account"}
         </button>
       </form>
+
+      {/* Quick Login for Development */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="pt-6 border-t border-dashed border-gray-300">
+          <p className="text-xs text-gray-400 text-center mb-3">
+            Development Quick Login
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => handleQuickLogin("onboarding")}
+              disabled={isPending || loading}
+              className="flex-1 py-2 px-3 text-sm bg-amber-100 text-amber-700 border border-amber-300 rounded-lg hover:bg-amber-200 disabled:opacity-50 transition-colors"
+            >
+              {isPending ? "..." : "Test: Onboarding"}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickLogin("dashboard")}
+              disabled={isPending || loading}
+              className="flex-1 py-2 px-3 text-sm bg-blue-100 text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-200 disabled:opacity-50 transition-colors"
+            >
+              {isPending ? "..." : "Test: Dashboard"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

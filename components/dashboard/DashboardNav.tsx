@@ -3,22 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
+import { SignOutButton } from "@/components/auth/SignOutButton";
 
 interface DashboardNavProps {
   user: User;
 }
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: "D" },
-  { href: "/profile", label: "Profile", icon: "P" },
-  { href: "/settings", label: "Settings", icon: "S" },
+  { href: "/dashboard", label: "Dashboard", icon: "📊" },
+  { href: "/profile", label: "Profile", icon: "👤" },
+  { href: "/settings", label: "Settings", icon: "⚙️" },
 ];
 
 export function DashboardNav({ user }: DashboardNavProps) {
   const pathname = usePathname();
 
   return (
-    <nav className="w-64 border-r bg-gray-50 p-4 hidden lg:block">
+    <nav className="w-64 border-r bg-gray-50 p-4 hidden lg:block relative">
       <div className="mb-8">
         <Link href="/dashboard" className="text-2xl font-bold text-emerald-600">
           Change
@@ -48,10 +49,9 @@ export function DashboardNav({ user }: DashboardNavProps) {
       </ul>
 
       <div className="absolute bottom-4 left-4 right-4">
-        <div className="border-t pt-4">
-          <p className="text-sm text-gray-500 truncate">
-            {user.email}
-          </p>
+        <div className="border-t pt-4 space-y-3">
+          <p className="text-sm text-gray-500 truncate">{user.email}</p>
+          <SignOutButton />
         </div>
       </div>
     </nav>

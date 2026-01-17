@@ -1,15 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
 import { AuthLanding } from "@/components/auth/AuthLanding";
 
-export default async function HomePage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+// Note: Middleware handles all auth redirects:
+// - Authenticated users with completed onboarding → /dashboard
+// - Authenticated users without completed onboarding → /onboarding/charities
+// - Unauthenticated users → stay here (login page)
 
-  if (user) {
-    redirect("/dashboard");
-  }
-
+export default function HomePage() {
   return (
     <main className="min-h-screen flex items-center justify-center p-6">
       <AuthLanding />
