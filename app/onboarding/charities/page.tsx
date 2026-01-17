@@ -7,13 +7,22 @@ import { CharityPicker, type Charity } from "@/components/onboarding/CharityPick
 export default function OnboardingCharitiesPage() {
   const router = useRouter();
   const [selectedCharities, setSelectedCharities] = useState<Charity[]>([]);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
 
   const handleToggle = (charity: Charity) => {
-    setSelectedCharities((prev) =>
-      prev.some((item) => item.id === charity.id)
-        ? prev.filter((item) => item.id !== charity.id)
-        : [...prev, charity]
-    );
+    setSelectedCharities((prev) => {
+      const alreadySelected = prev.some((item) => item.id === charity.id);
+      if (alreadySelected) {
+        setSelectionError(null);
+        return prev.filter((item) => item.id !== charity.id);
+      }
+      if (prev.length >= 5) {
+        setSelectionError(null);
+        return prev;
+      }
+      setSelectionError(null);
+      return [...prev, charity];
+    });
   };
 
   const handleContinue = () => {
@@ -38,7 +47,7 @@ export default function OnboardingCharitiesPage() {
         </p>
         <h1 className="text-3xl font-bold">Choose your charities</h1>
         <p className="text-gray-500 max-w-md mx-auto">
-          Select one or more charities that will receive your round-up
+          Select up to 5 charities that will receive your round-up
           donations. You can change this anytime.
         </p>
       </div>
@@ -50,6 +59,9 @@ export default function OnboardingCharitiesPage() {
           {selectedCharities.length} charit
           {selectedCharities.length === 1 ? "y" : "ies"} selected
         </p>
+      )}
+      {selectionError && (
+        <p className="text-center text-sm text-red-500">{selectionError}</p>
       )}
 
       <div className="flex justify-end pt-4">
