@@ -3,41 +3,24 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CharityPicker } from "@/components/onboarding/CharityPicker";
-
-interface Charity {
-  id: string;
-  name: string;
-  description: string;
-  logo: string;
-  imageUrl?: string;
-}
+import type { Charity } from "@/lib/charities/data";
 
 export default function OnboardingCharitiesPage() {
   const router = useRouter();
-  const [selectedCharityIds, setSelectedCharityIds] = useState<string[]>([]);
-  const [charityData, setCharityData] = useState<Map<string, Charity>>(new Map());
+  const [selectedCharities, setSelectedCharities] = useState<Charity[]>([]);
 
-  const handleToggle = (charityId: string, charity?: Charity) => {
-    setSelectedCharityIds((prev) =>
-      prev.includes(charityId)
-        ? prev.filter((id) => id !== charityId)
-        : [...prev, charityId]
+  const handleToggle = (charity: Charity) => {
+    setSelectedCharities((prev) =>
+      prev.some((item) => item.id === charity.id)
+        ? prev.filter((item) => item.id !== charity.id)
+        : [...prev, charity]
     );
-    
-    // Store charity data when selected
-    if (charity && !charityData.has(charityId)) {
-      setCharityData((prev) => new Map(prev).set(charityId, charity));
-    }
   };
 
   const handleContinue = () => {
-    if (selectedCharityIds.length === 0) return;
+    if (selectedCharities.length === 0) return;
 
-    // Store full charity objects in sessionStorage for the goals page
-    const selectedCharities = selectedCharityIds
-      .map((id) => charityData.get(id))
-      .filter((c): c is Charity => c !== undefined);
-    
+    // Store selected charities in sessionStorage for the goals page
     sessionStorage.setItem(
       "onboarding_charities",
       JSON.stringify(selectedCharities)
@@ -46,7 +29,7 @@ export default function OnboardingCharitiesPage() {
   };
 
   // Total steps: 4 if >1 charity selected (includes donation-mode), 3 otherwise
-  const totalSteps = selectedCharityIds.length > 1 ? 4 : 3;
+  const totalSteps = selectedCharities.length > 1 ? 4 : 3;
 
   return (
     <div className="space-y-8">
@@ -61,12 +44,12 @@ export default function OnboardingCharitiesPage() {
         </p>
       </div>
 
-      <CharityPicker selected={selectedCharityIds} onToggle={handleToggle} onCharityData={setCharityData} />
+      <CharityPicker selected={selectedCharities} onToggle={handleToggle} />
 
-      {selectedCharityIds.length > 0 && (
+      {selectedCharities.length > 0 && (
         <p className="text-center text-sm text-gray-500">
-          {selectedCharityIds.length} charit
-          {selectedCharityIds.length === 1 ? "y" : "ies"} selected
+          {selectedCharities.length} charit
+          {selectedCharities.length === 1 ? "y" : "ies"} selected
         </p>
       )}
 
@@ -74,9 +57,9 @@ export default function OnboardingCharitiesPage() {
         <button
           type="button"
           onClick={handleContinue}
-          disabled={selectedCharityIds.length === 0}
+          disabled={selectedCharities.length === 0}
           className={`px-6 py-2 rounded-lg transition-colors ${
-            selectedCharityIds.length > 0
+            selectedCharities.length > 0
               ? "bg-emerald-600 text-white hover:bg-emerald-700"
               : "bg-gray-200 text-gray-400 cursor-not-allowed"
           }`}

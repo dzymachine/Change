@@ -1,27 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { mockCharities } from "@/lib/charities/data";
+import { mockCharities, type Charity } from "@/lib/charities/data";
 
 // Re-export for backward compatibility
 export { mockCharities, type Charity } from "@/lib/charities/data";
 
-interface Charity {
-  id: string;
-  name: string;
-  description: string;
-  logo: string;
-  imageUrl?: string;
-}
-
 interface CharityPickerProps {
-  selected: string[];
-  onToggle: (charityId: string, charity?: Charity) => void;
-  onCharityData?: (setter: (prev: Map<string, Charity>) => Map<string, Charity>) => void;
+  selected: Charity[];
+  onToggle: (charity: Charity) => void;
 }
 
-export function CharityPicker({ selected, onToggle, onCharityData }: CharityPickerProps) {
-  const [charities, setCharities] = useState<Charity[]>(mockCharities);
+export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
+  const [charities, setCharities] = useState(mockCharities);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,14 +29,6 @@ export function CharityPicker({ selected, onToggle, onCharityData }: CharityPick
         const data = await response.json();
         if (isMounted && Array.isArray(data.charities)) {
           setCharities(data.charities);
-          // Pass all charity data to parent
-          if (onCharityData) {
-            onCharityData(() => {
-              const map = new Map<string, Charity>();
-              data.charities.forEach((c: Charity) => map.set(c.id, c));
-              return map;
-            });
-          }
         }
       } catch (err) {
         if (isMounted) {
@@ -65,7 +48,7 @@ export function CharityPicker({ selected, onToggle, onCharityData }: CharityPick
     return () => {
       isMounted = false;
     };
-  }, [onCharityData]);
+  }, []);
 
   if (loading) {
     return (
@@ -86,12 +69,12 @@ export function CharityPicker({ selected, onToggle, onCharityData }: CharityPick
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {charities.map((charity) => {
-        const isSelected = selected.includes(charity.id);
+        const isSelected = selected.some((item) => item.id === charity.id);
 
         return (
           <button
             key={charity.id}
-            onClick={() => onToggle(charity.id, charity)}
+            onClick={() => onToggle(charity)}
             className={`p-4 rounded-xl border-2 text-left transition-all ${
               isSelected
                 ? "border-emerald-500 bg-emerald-50"

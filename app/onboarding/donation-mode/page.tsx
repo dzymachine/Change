@@ -2,15 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { mockCharities, type Charity } from "@/lib/charities/data";
 import { saveDonationMode } from "@/actions/donations";
-
-interface Charity {
-  id: string;
-  name: string;
-  description: string;
-  logo: string;
-  imageUrl?: string;
-}
 
 interface CharityWithGoal {
   charity: Charity;
@@ -26,31 +19,45 @@ export default function OnboardingDonationModePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load charities from sessionStorage (now stored as full objects)
+  // Load charities from sessionStorage
   useEffect(() => {
+    let isMounted = true;
+    const cleanup = () => {
+      isMounted = false;
+    };
     const storedCharities = sessionStorage.getItem("onboarding_charities");
     const storedGoals = sessionStorage.getItem("onboarding_goals");
 
     if (!storedCharities || !storedGoals) {
       router.push("/onboarding/charities");
-      return;
+      return cleanup;
     }
 
+    let parsedCharities: unknown;
+    let goals: { charityId: string; goalAmount: number }[] = [];
+
     try {
-      const charitiesList: Charity[] = JSON.parse(storedCharities);
-      const goals: { charityId: string; goalAmount: number }[] =
-        JSON.parse(storedGoals);
+      parsedCharities = JSON.parse(storedCharities);
+      goals = JSON.parse(storedGoals);
+    } catch {
+      router.push("/onboarding/charities");
+      return cleanup;
+    }
 
-      // If only 1 charity, skip this page
-      if (charitiesList.length <= 1) {
-        router.push("/onboarding/plaid");
-        return;
-      }
+    const isCharity = (value: unknown): value is Charity =>
+      Boolean(
+        value &&
+          typeof value === "object" &&
+          "id" in value &&
+          "name" in value
+      );
 
-      const charitiesWithGoals = charitiesList
-        .map((charity, index) => {
-          const goal = goals.find((g) => g.charityId === charity.id);
-          if (!goal) return null;
+    const buildCharities = (ids: string[], list: Charity[]) =>
+      ids
+        .map((id, index) => {
+          const charity = list.find((c) => c.id === id);
+          const goal = goals.find((g) => g.charityId === id);
+          if (!charity || !goal) return null;
           return {
             charity,
             goalAmount: goal.goalAmount,
@@ -59,10 +66,65 @@ export default function OnboardingDonationModePage() {
         })
         .filter((c): c is CharityWithGoal => c !== null);
 
-      setCharities(charitiesWithGoals);
-    } catch {
-      router.push("/onboarding/charities");
+    const loadFromIds = async (ids: string[]) => {
+      try {
+        const response = await fetch("/api/globalgiving/featured");
+        if (response.ok) {
+          const data = await response.json();
+          const fromApi = Array.isArray(data.charities)
+            ? (data.charities as Charity[])
+            : [];
+          const charitiesWithGoals = buildCharities(ids, fromApi);
+          if (isMounted && charitiesWithGoals.length > 0) {
+            setCharities(charitiesWithGoals);
+            return;
+          }
+        }
+      } catch {
+        // Fall back to mock data
+      }
+
+      const charitiesWithGoals = buildCharities(ids, mockCharities);
+      if (isMounted) {
+        if (charitiesWithGoals.length === 0) {
+          router.push("/onboarding/charities");
+          return;
+        }
+        setCharities(charitiesWithGoals);
+      }
+    };
+
+    if (
+      Array.isArray(parsedCharities) &&
+      parsedCharities.every((item) => typeof item === "string")
+    ) {
+      const ids = parsedCharities;
+      if (ids.length <= 1) {
+        router.push("/onboarding/plaid");
+        return cleanup;
+      }
+      loadFromIds(ids);
+      return cleanup;
     }
+
+    if (Array.isArray(parsedCharities)) {
+      const charities = parsedCharities.filter(isCharity);
+      if (charities.length <= 1) {
+        router.push("/onboarding/plaid");
+        return cleanup;
+      }
+      const ids = charities.map((charity) => charity.id);
+      const charitiesWithGoals = buildCharities(ids, charities);
+      if (charitiesWithGoals.length === 0) {
+        router.push("/onboarding/charities");
+        return cleanup;
+      }
+      setCharities(charitiesWithGoals);
+      return cleanup;
+    }
+
+    router.push("/onboarding/charities");
+    return cleanup;
   }, [router]);
 
   const handleDragStart = (index: number) => {
@@ -220,15 +282,7 @@ export default function OnboardingDonationModePage() {
                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 font-bold text-sm">
                   {index + 1}
                 </div>
-                {item.charity.imageUrl ? (
-                  <img
-                    src={item.charity.imageUrl}
-                    alt={item.charity.name}
-                    className="w-10 h-10 rounded-lg object-cover"
-                  />
-                ) : (
-                  <span className="text-2xl">{item.charity.logo}</span>
-                )}
+                <span className="text-2xl">{item.charity.logo}</span>
                 <div className="flex-1">
                   <p className="font-medium text-black">{item.charity.name}</p>
                   <p className="text-sm text-gray-500">
@@ -268,15 +322,7 @@ export default function OnboardingDonationModePage() {
                 key={item.charity.id}
                 className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border"
               >
-                {item.charity.imageUrl ? (
-                  <img
-                    src={item.charity.imageUrl}
-                    alt={item.charity.name}
-                    className="w-8 h-8 rounded-lg object-cover"
-                  />
-                ) : (
-                  <span className="text-xl">{item.charity.logo}</span>
-                )}
+                <span className="text-xl">{item.charity.logo}</span>
                 <span className="text-sm font-medium">
                   <span className="text-black">{item.charity.name}</span>
                 </span>

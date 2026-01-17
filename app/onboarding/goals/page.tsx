@@ -2,15 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { mockCharities, type Charity } from "@/lib/charities/data";
 import { saveCharityGoals } from "@/actions/donations";
-
-interface Charity {
-  id: string;
-  name: string;
-  description: string;
-  logo: string;
-  imageUrl?: string;
-}
 
 interface CharityGoal {
   charityId: string;
@@ -33,26 +26,84 @@ export default function OnboardingGoalsPage() {
   // Determine total steps: 4 if >1 charity (includes donation-mode), 3 otherwise
   const totalSteps = selectedCharities.length > 1 ? 4 : 3;
 
-  // Load selected charities from sessionStorage (now stored as full objects)
+  // Load selected charities from sessionStorage
   useEffect(() => {
+    let isMounted = true;
+    const cleanup = () => {
+      isMounted = false;
+    };
     const stored = sessionStorage.getItem("onboarding_charities");
     if (!stored) {
       router.push("/onboarding/charities");
-      return;
+      return cleanup;
     }
 
+    let parsed: unknown;
     try {
-      const charities: Charity[] = JSON.parse(stored);
-      
-      if (!Array.isArray(charities) || charities.length === 0) {
-        router.push("/onboarding/charities");
-        return;
-      }
-
-      setSelectedCharities(charities);
+      parsed = JSON.parse(stored);
     } catch {
       router.push("/onboarding/charities");
+      return cleanup;
     }
+
+    const isCharity = (value: unknown): value is Charity =>
+      Boolean(
+        value &&
+          typeof value === "object" &&
+          "id" in value &&
+          "name" in value
+      );
+
+    const loadFromIds = async (ids: string[]) => {
+      try {
+        const response = await fetch("/api/globalgiving/featured");
+        if (response.ok) {
+          const data = await response.json();
+          const fromApi = Array.isArray(data.charities)
+            ? (data.charities as Charity[]).filter((c) => ids.includes(c.id))
+            : [];
+          if (isMounted && fromApi.length > 0) {
+            setSelectedCharities(fromApi);
+            return;
+          }
+        }
+      } catch {
+        // Fall back to mock data
+      }
+
+      const fallback = ids
+        .map((id) => mockCharities.find((c) => c.id === id))
+        .filter((c): c is Charity => c !== undefined);
+
+      if (isMounted) {
+        if (fallback.length === 0) {
+          router.push("/onboarding/charities");
+          return;
+        }
+        setSelectedCharities(fallback);
+      }
+    };
+
+    if (
+      Array.isArray(parsed) &&
+      parsed.every((item) => typeof item === "string")
+    ) {
+      loadFromIds(parsed);
+      return cleanup;
+    }
+
+    if (Array.isArray(parsed)) {
+      const charities = parsed.filter(isCharity);
+      if (charities.length === 0) {
+        router.push("/onboarding/charities");
+        return cleanup;
+      }
+      setSelectedCharities(charities);
+      return cleanup;
+    }
+
+    router.push("/onboarding/charities");
+    return cleanup;
   }, [router]);
 
   // Focus input when charity changes
@@ -177,18 +228,10 @@ export default function OnboardingGoalsPage() {
           }`}
         >
           <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 text-center space-y-6">
-            {currentCharity.imageUrl ? (
-              <img
-                src={currentCharity.imageUrl}
-                alt={currentCharity.name}
-                className="w-24 h-24 mx-auto rounded-xl object-cover"
-              />
-            ) : (
-              <div className="text-6xl">{currentCharity.logo}</div>
-            )}
+            <div className="text-6xl">{currentCharity.logo}</div>
             <div>
               <h2 className="text-2xl font-bold text-black">{currentCharity.name}</h2>
-              <p className="text-gray-500 mt-1 line-clamp-3">{currentCharity.description}</p>
+              <p className="text-gray-500 mt-1">{currentCharity.description}</p>
             </div>
 
             <div className="space-y-2">
