@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { mockCharities } from "@/lib/charities/data";
+import { mockCharities, type Charity } from "@/lib/charities/data";
 
 // Re-export for backward compatibility
 export { mockCharities, type Charity } from "@/lib/charities/data";
 
 interface CharityPickerProps {
-  selected: string[];
-  onToggle: (charityId: string) => void;
+  selected: Charity[];
+  onToggle: (charity: Charity) => void;
 }
 
 export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
@@ -69,12 +69,12 @@ export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {charities.map((charity) => {
-        const isSelected = selected.includes(charity.id);
+        const isSelected = selected.some((item) => item.id === charity.id);
 
         return (
           <button
             key={charity.id}
-            onClick={() => onToggle(charity.id)}
+            onClick={() => onToggle(charity)}
             className={`p-4 rounded-xl border-2 text-left transition-all ${
               isSelected
                 ? "border-emerald-500 bg-emerald-50"

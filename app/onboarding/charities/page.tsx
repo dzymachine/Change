@@ -3,16 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CharityPicker } from "@/components/onboarding/CharityPicker";
+import type { Charity } from "@/lib/charities/data";
 
 export default function OnboardingCharitiesPage() {
   const router = useRouter();
-  const [selectedCharities, setSelectedCharities] = useState<string[]>([]);
+  const [selectedCharities, setSelectedCharities] = useState<Charity[]>([]);
 
-  const handleToggle = (charityId: string) => {
+  const handleToggle = (charity: Charity) => {
     setSelectedCharities((prev) =>
-      prev.includes(charityId)
-        ? prev.filter((id) => id !== charityId)
-        : [...prev, charityId]
+      prev.some((item) => item.id === charity.id)
+        ? prev.filter((item) => item.id !== charity.id)
+        : [...prev, charity]
     );
   };
 

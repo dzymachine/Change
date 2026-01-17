@@ -28,23 +28,82 @@ export default function OnboardingGoalsPage() {
 
   // Load selected charities from sessionStorage
   useEffect(() => {
+    let isMounted = true;
+    const cleanup = () => {
+      isMounted = false;
+    };
     const stored = sessionStorage.getItem("onboarding_charities");
     if (!stored) {
       router.push("/onboarding/charities");
-      return;
+      return cleanup;
     }
 
-    const charityIds: string[] = JSON.parse(stored);
-    const charities = charityIds
-      .map((id) => mockCharities.find((c) => c.id === id))
-      .filter((c): c is Charity => c !== undefined);
-
-    if (charities.length === 0) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(stored);
+    } catch {
       router.push("/onboarding/charities");
-      return;
+      return cleanup;
     }
 
-    setSelectedCharities(charities);
+    const isCharity = (value: unknown): value is Charity =>
+      Boolean(
+        value &&
+          typeof value === "object" &&
+          "id" in value &&
+          "name" in value
+      );
+
+    const loadFromIds = async (ids: string[]) => {
+      try {
+        const response = await fetch("/api/globalgiving/featured");
+        if (response.ok) {
+          const data = await response.json();
+          const fromApi = Array.isArray(data.charities)
+            ? (data.charities as Charity[]).filter((c) => ids.includes(c.id))
+            : [];
+          if (isMounted && fromApi.length > 0) {
+            setSelectedCharities(fromApi);
+            return;
+          }
+        }
+      } catch {
+        // Fall back to mock data
+      }
+
+      const fallback = ids
+        .map((id) => mockCharities.find((c) => c.id === id))
+        .filter((c): c is Charity => c !== undefined);
+
+      if (isMounted) {
+        if (fallback.length === 0) {
+          router.push("/onboarding/charities");
+          return;
+        }
+        setSelectedCharities(fallback);
+      }
+    };
+
+    if (
+      Array.isArray(parsed) &&
+      parsed.every((item) => typeof item === "string")
+    ) {
+      loadFromIds(parsed);
+      return cleanup;
+    }
+
+    if (Array.isArray(parsed)) {
+      const charities = parsed.filter(isCharity);
+      if (charities.length === 0) {
+        router.push("/onboarding/charities");
+        return cleanup;
+      }
+      setSelectedCharities(charities);
+      return cleanup;
+    }
+
+    router.push("/onboarding/charities");
+    return cleanup;
   }, [router]);
 
   // Focus input when charity changes
