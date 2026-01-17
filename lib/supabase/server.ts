@@ -3,6 +3,8 @@ import { createServerClient } from "@supabase/ssr";
 
 export async function createClient() {
   const cookieStore = await cookies();
+  type CookieOptions = Parameters<typeof cookieStore.set>[2];
+  type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,7 +14,7 @@ export async function createClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: CookieToSet[]) {
           // Next.js server components can't set cookies directly unless in a Route Handler / Middleware.
           // This is okay here; session refresh is usually handled in middleware.
           try {

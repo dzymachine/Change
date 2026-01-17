@@ -33,7 +33,7 @@ export async function selectCharity(charityId: string): Promise<ActionResult> {
   }
 
   revalidatePath("/settings");
-  revalidatePath("/onboarding/charity");
+  revalidatePath("/onboarding/charities");
 
   return { success: true };
 }
@@ -119,7 +119,11 @@ export async function getDashboardStats() {
     .eq("user_id", user.id)
     .eq("status", "completed");
 
-  const totalDonated = donations?.reduce((sum, d) => sum + d.amount, 0) || 0;
+  const totalDonated =
+    donations?.reduce(
+      (sum: number, d: { amount: number | null }) => sum + (d.amount ?? 0),
+      0
+    ) ?? 0;
 
   // Get transaction count
   const { count: transactionsCount } = await supabase
@@ -138,6 +142,13 @@ export async function getDashboardStats() {
     .eq("id", user.id)
     .single();
 
+  const charity = (profile as unknown as {
+    charity?: { name: string } | { name: string }[] | null;
+  } | null)?.charity;
+  const currentCharity = Array.isArray(charity)
+    ? charity[0]?.name ?? null
+    : charity?.name ?? null;
+
   // Get pending roundup amount
   const { data: pendingTx } = await supabase
     .from("transactions")
@@ -146,12 +157,17 @@ export async function getDashboardStats() {
     .eq("processed_for_donation", false)
     .eq("is_pending", false);
 
-  const pendingRoundup = pendingTx?.reduce((sum, tx) => sum + (tx.roundup_amount || 0), 0) || 0;
+  const pendingRoundup =
+    pendingTx?.reduce(
+      (sum: number, tx: { roundup_amount: number | null }) =>
+        sum + (tx.roundup_amount ?? 0),
+      0
+    ) ?? 0;
 
   return {
     totalDonated,
     transactionsCount: transactionsCount || 0,
-    currentCharity: (profile?.charity as { name: string } | null)?.name || null,
+    currentCharity,
     monthlyAverage: totalDonated / 12, // Simplified
     pendingRoundup,
   };

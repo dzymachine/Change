@@ -50,7 +50,9 @@ export async function createDonationBatch(userId: string): Promise<DonationBatch
   }
 
   // Calculate total
-  const roundupAmounts = transactions.map((tx) => tx.roundup_amount || 0);
+  const roundupAmounts = transactions.map(
+    (tx: { roundup_amount: number | null }) => tx.roundup_amount ?? 0
+  );
   const totalAmount = calculateTotalRoundup(roundupAmounts);
 
   // Check minimum threshold
@@ -62,7 +64,7 @@ export async function createDonationBatch(userId: string): Promise<DonationBatch
   return {
     userId,
     charityId: profile.selected_charity_id,
-    transactionIds: transactions.map((tx) => tx.id),
+    transactionIds: transactions.map((tx: { id: string }) => tx.id),
     totalAmount,
   };
 }
@@ -126,6 +128,10 @@ export async function getPendingDonationAmount(userId: string): Promise<number> 
     return 0;
   }
 
-  const total = data.reduce((sum, tx) => sum + (tx.roundup_amount || 0), 0);
+  const total = data.reduce(
+    (sum: number, tx: { roundup_amount: number | null }) =>
+      sum + (tx.roundup_amount ?? 0),
+    0
+  );
   return Math.round(total * 100) / 100;
 }
