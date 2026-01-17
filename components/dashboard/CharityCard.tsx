@@ -6,6 +6,7 @@ interface CharityCardProps {
   id: string;
   name: string;
   location?: string;
+  imageUrl?: string;
   goalAmount: number;
   currentAmount: number;
   priority: number;
@@ -25,6 +26,7 @@ export function CharityCard({
   id,
   name,
   location = "Santa Cruz",
+  imageUrl,
   goalAmount,
   currentAmount,
   isCompleted,
@@ -106,11 +108,19 @@ export function CharityCard({
 
         {/* Header with image placeholder */}
         <div className="w-full h-20 rounded-lg bg-gradient-to-br from-gray-100 to-gray-50 mb-3 flex items-center justify-center overflow-hidden">
-          <div
-            className={`w-12 h-12 rounded-full ${color.bg} ${color.text} flex items-center justify-center text-base font-bold ${color.border} border-2`}
-          >
-            {initials}
-          </div>
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={name}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div
+              className={`w-12 h-12 rounded-full ${color.bg} ${color.text} flex items-center justify-center text-base font-bold ${color.border} border-2`}
+            >
+              {initials}
+            </div>
+          )}
         </div>
 
         {/* Name and location */}
@@ -168,10 +178,20 @@ export function CharityCard({
       {/* Header row */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div
-            className={`w-10 h-10 rounded-full ${color.bg} ${color.text} flex items-center justify-center text-sm font-semibold ${color.border} border`}
-          >
-            {initials}
+          <div className="w-10 h-10 rounded-full overflow-hidden border">
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div
+                className={`w-full h-full ${color.bg} ${color.text} flex items-center justify-center text-sm font-semibold ${color.border} border`}
+              >
+                {initials}
+              </div>
+            )}
           </div>
           <div>
             <div className="flex items-center gap-2">

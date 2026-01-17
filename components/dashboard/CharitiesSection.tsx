@@ -14,6 +14,7 @@ interface CharityGoal {
   charityId: string;
   name: string;
   logo: string;
+  imageUrl?: string | null;
   goalAmount: number;
   currentAmount: number;
   priority: number;
@@ -212,6 +213,7 @@ export function CharitiesSection({
             key={charity.id}
             id={charity.id}
             name={charity.name}
+            imageUrl={charity.imageUrl || undefined}
             goalAmount={charity.goalAmount}
             currentAmount={charity.currentAmount}
             priority={charity.priority}

@@ -8,6 +8,7 @@ export interface UserCharityGoal {
   charityId: string;
   name: string;
   logo: string;
+  imageUrl?: string | null;
   goalAmount: number;
   currentAmount: number;
   priority: number;
@@ -35,6 +36,7 @@ export default async function DashboardPage() {
       charity_id,
       charity_name,
       charity_logo,
+      charity_image_url,
       goal_amount,
       current_amount,
       priority,
@@ -54,6 +56,7 @@ export default async function DashboardPage() {
       charityId: uc.charity_id,
       name: uc.charity_name || "Unknown Charity",
       logo: uc.charity_logo || "🎯",
+      imageUrl: uc.charity_image_url,
       goalAmount: parseFloat(String(uc.goal_amount)) || 0,
       currentAmount: parseFloat(String(uc.current_amount)) || 0,
       priority: uc.priority,
