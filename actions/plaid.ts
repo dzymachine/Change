@@ -54,7 +54,7 @@ export async function exchangePlaidToken(
     }
 
     revalidatePath("/settings");
-    revalidatePath("/onboarding");
+    revalidatePath("/onboarding/plaid");
 
     return { success: true };
   } catch (error) {

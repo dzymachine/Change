@@ -10,7 +10,7 @@ export default async function OnboardingLayout({
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/");
   }
 
   // TODO: Check if user has already completed onboarding

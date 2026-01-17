@@ -9,10 +9,9 @@ interface DashboardNavProps {
 }
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: "📊" },
-  { href: "/transactions", label: "Transactions", icon: "💳" },
-  { href: "/donations", label: "Donations", icon: "❤️" },
-  { href: "/settings", label: "Settings", icon: "⚙️" },
+  { href: "/dashboard", label: "Dashboard", icon: "D" },
+  { href: "/profile", label: "Profile", icon: "P" },
+  { href: "/settings", label: "Settings", icon: "S" },
 ];
 
 export function DashboardNav({ user }: DashboardNavProps) {
@@ -21,7 +20,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
   return (
     <nav className="w-64 border-r bg-gray-50 p-4 hidden lg:block">
       <div className="mb-8">
-        <Link href="/" className="text-2xl font-bold text-emerald-600">
+        <Link href="/dashboard" className="text-2xl font-bold text-emerald-600">
           Change
         </Link>
       </div>
@@ -29,7 +28,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
       <ul className="space-y-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
-          
+
           return (
             <li key={item.href}>
               <Link
