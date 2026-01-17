@@ -13,7 +13,12 @@ interface ActionResult {
  */
 export async function addUserCharity(
   charityId: string,
-  goalAmount: number
+  goalAmount: number,
+  charityInfo?: {
+    name?: string;
+    logo?: string;
+    imageUrl?: string;
+  }
 ): Promise<ActionResult> {
   const supabase = await createClient();
   const {
@@ -48,6 +53,9 @@ export async function addUserCharity(
   const { error } = await supabase.from("user_charities").insert({
     user_id: user.id,
     charity_id: charityId,
+    charity_name: charityInfo?.name || "Unknown Charity",
+    charity_logo: charityInfo?.logo || "🎯",
+    charity_image_url: charityInfo?.imageUrl || null,
     goal_amount: goalAmount,
     current_amount: 0,
     priority: nextPriority,

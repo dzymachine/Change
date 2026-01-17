@@ -14,16 +14,19 @@ interface AddCharityModalProps {
   isOpen: boolean;
   onClose: () => void;
   existingCharityIds: string[];
-  onAddCharity: (charityId: string, goalAmount: number) => Promise<void>;
+  onAddCharities: (
+    charities: { id: string; name?: string; logo?: string; imageUrl?: string }[],
+    goalAmount: number
+  ) => Promise<void>;
 }
 
 export function AddCharityModal({
   isOpen,
   onClose,
   existingCharityIds,
-  onAddCharity,
+  onAddCharities,
 }: AddCharityModalProps) {
-  const [selectedCharity, setSelectedCharity] = useState<string | null>(null);
+  const [selectedCharities, setSelectedCharities] = useState<Charity[]>([]);
   const [goalAmount, setGoalAmount] = useState<string>("5.00");
   const [isPending, startTransition] = useTransition();
   const [charities, setCharities] = useState<Charity[]>([]);
@@ -53,12 +56,35 @@ export function AddCharityModal({
     (c) => !existingCharityIds.includes(c.id)
   );
 
+  const maxSelectable = Math.max(0, 5 - existingCharityIds.length);
+
+  const toggleCharity = (charity: Charity) => {
+    setSelectedCharities((prev) => {
+      const exists = prev.some((item) => item.id === charity.id);
+      if (exists) {
+        return prev.filter((item) => item.id !== charity.id);
+      }
+      if (prev.length >= maxSelectable) {
+        return prev;
+      }
+      return [...prev, charity];
+    });
+  };
+
   const handleAdd = () => {
-    if (!selectedCharity) return;
+    if (selectedCharities.length === 0) return;
 
     startTransition(async () => {
-      await onAddCharity(selectedCharity, parseFloat(goalAmount) || 5);
-      setSelectedCharity(null);
+      await onAddCharities(
+        selectedCharities.map((charity) => ({
+          id: charity.id,
+          name: charity.name,
+          logo: charity.logo,
+          imageUrl: charity.imageUrl,
+        })),
+        parseFloat(goalAmount) || 5
+      );
+      setSelectedCharities([]);
       setGoalAmount("5.00");
       onClose();
     });
@@ -104,12 +130,15 @@ export function AddCharityModal({
             </p>
           ) : (
             <div className="space-y-2">
+              <p className="text-xs text-gray-500">
+                Select up to {maxSelectable} charities
+              </p>
               {availableCharities.map((charity) => (
                 <button
                   key={charity.id}
-                  onClick={() => setSelectedCharity(charity.id)}
+                  onClick={() => toggleCharity(charity)}
                   className={`w-full p-4 rounded-xl border text-left transition-all ${
-                    selectedCharity === charity.id
+                    selectedCharities.some((item) => item.id === charity.id)
                       ? "border-emerald-500 bg-emerald-50"
                       : "border-gray-200 hover:border-gray-300"
                   }`}
@@ -138,7 +167,7 @@ export function AddCharityModal({
             </div>
           )}
 
-          {selectedCharity && (
+          {selectedCharities.length > 0 && (
             <div className="mt-6 pt-6 border-t">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Donation Goal
@@ -163,10 +192,16 @@ export function AddCharityModal({
         <div className="p-6 border-t bg-gray-50 rounded-b-2xl">
           <button
             onClick={handleAdd}
-            disabled={!selectedCharity || isPending || availableCharities.length === 0}
+            disabled={
+              selectedCharities.length === 0 ||
+              isPending ||
+              availableCharities.length === 0
+            }
             className="w-full py-2.5 bg-black text-white rounded-lg font-medium transition-colors hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            {isPending ? "Adding..." : "Add Charity"}
+            {isPending
+              ? "Adding..."
+              : `Add ${selectedCharities.length || ""} Charit${selectedCharities.length === 1 ? "y" : "ies"}`}
           </button>
         </div>
       </div>

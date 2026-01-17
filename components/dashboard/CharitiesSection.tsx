@@ -93,8 +93,19 @@ export function CharitiesSection({
     setDraggedIndex(null);
   };
 
-  const handleAddCharity = async (charityId: string, goalAmount: number) => {
-    await addUserCharity(charityId, goalAmount);
+  const handleAddCharities = async (
+    charitiesToAdd: { id: string; name?: string; logo?: string; imageUrl?: string }[],
+    goalAmount: number
+  ) => {
+    await Promise.all(
+      charitiesToAdd.map((charity) =>
+        addUserCharity(charity.id, goalAmount, {
+          name: charity.name,
+          logo: charity.logo,
+          imageUrl: charity.imageUrl,
+        })
+      )
+    );
     // Refresh will happen from revalidatePath
     window.location.reload();
   };
@@ -260,12 +271,12 @@ export function CharitiesSection({
       )}
 
       {/* Add Charity Modal */}
-      <AddCharityModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        existingCharityIds={existingCharityIds}
-        onAddCharity={handleAddCharity}
-      />
+        <AddCharityModal
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          existingCharityIds={existingCharityIds}
+          onAddCharities={handleAddCharities}
+        />
     </div>
   );
 }
