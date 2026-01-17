@@ -12,38 +12,38 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-8 max-w-2xl">
       <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-gray-500 mt-1">
+        <h1 className="text-3xl font-bold text-black">Settings</h1>
+        <p className="text-gray-600 mt-1">
           Manage your account and preferences
         </p>
       </div>
 
       {/* Profile Section */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold">Profile</h2>
-        <div className="border rounded-xl p-4 space-y-3">
+        <h2 className="text-xl font-semibold text-black">Profile</h2>
+        <div className="bg-white border rounded-xl p-5 space-y-3">
           <div>
             <label className="text-sm text-gray-500">Email</label>
-            <p className="font-medium">{user?.email}</p>
+            <p className="font-medium text-black">{user?.email}</p>
           </div>
         </div>
       </section>
 
       {/* Linked Accounts Section */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold">Linked Bank Accounts</h2>
+        <h2 className="text-xl font-semibold text-black">Linked Bank Accounts</h2>
         
         {linkedAccounts.length === 0 ? (
-          <div className="border rounded-xl p-6 text-center">
-            <p className="text-gray-500 mb-4">No bank accounts linked yet</p>
+          <div className="bg-white border rounded-xl p-6 text-center">
+            <p className="text-gray-600 mb-4">No bank accounts linked yet</p>
             <LinkBankButton />
           </div>
         ) : (
           <div className="space-y-3">
             {linkedAccounts.map((account) => (
-              <div key={account.id} className="border rounded-xl p-4 flex items-center justify-between">
+              <div key={account.id} className="bg-white border rounded-xl p-4 flex items-center justify-between">
                 <div>
-                  <p className="font-medium">{account.institutionName}</p>
+                  <p className="font-medium text-black">{account.institutionName}</p>
                   <p className="text-sm text-gray-500">
                     {account.isActive ? "Active" : "Inactive"}
                   </p>
@@ -58,25 +58,13 @@ export default async function SettingsPage() {
         )}
       </section>
 
-      {/* Charity Selection */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold">Selected Charity</h2>
-        <div className="border rounded-xl p-4">
-          <p className="font-medium">Local Food Bank</p>
-          <p className="text-sm text-gray-500">Currently receiving your donations</p>
-          <button className="mt-3 text-emerald-600 text-sm hover:underline">
-            Change charity
-          </button>
-        </div>
-      </section>
-
       {/* Round-up Settings */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold">Round-up Settings</h2>
-        <div className="border rounded-xl p-4 space-y-4">
+        <h2 className="text-xl font-semibold text-black">Round-up Settings</h2>
+        <div className="bg-white border rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">Enable round-ups</p>
+              <p className="font-medium text-black">Enable round-ups</p>
               <p className="text-sm text-gray-500">Automatically round up transactions</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -90,7 +78,7 @@ export default async function SettingsPage() {
       {/* Danger Zone */}
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-red-600">Danger Zone</h2>
-        <div className="border border-red-200 rounded-xl p-4 space-y-4">
+        <div className="bg-white border border-red-200 rounded-xl p-5 space-y-4">
           <LogoutButton />
         </div>
       </section>
