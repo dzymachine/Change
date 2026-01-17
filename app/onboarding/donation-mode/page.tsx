@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { mockCharities, type Charity } from "@/lib/charities/data";
+import type { Charity } from "@/components/onboarding/CharityPicker";
 import { saveDonationMode } from "@/actions/donations";
 
 interface CharityWithGoal {
@@ -68,7 +68,8 @@ export default function OnboardingDonationModePage() {
 
     const loadFromIds = async (ids: string[]) => {
       try {
-        const response = await fetch("/api/globalgiving/featured");
+        // Fetch charities from our Supabase endpoint
+        const response = await fetch("/api/charities");
         if (response.ok) {
           const data = await response.json();
           const fromApi = Array.isArray(data.charities)
@@ -81,16 +82,11 @@ export default function OnboardingDonationModePage() {
           }
         }
       } catch {
-        // Fall back to mock data
+        // If API fails, redirect to charity selection
       }
 
-      const charitiesWithGoals = buildCharities(ids, mockCharities);
       if (isMounted) {
-        if (charitiesWithGoals.length === 0) {
-          router.push("/onboarding/charities");
-          return;
-        }
-        setCharities(charitiesWithGoals);
+        router.push("/onboarding/charities");
       }
     };
 
@@ -159,9 +155,16 @@ export default function OnboardingDonationModePage() {
     setError(null);
     setIsSaving(true);
 
-    // Update priorities in sessionStorage for saving
+    // Update priorities with full charity info for upsert
     const updatedGoals = charities.map((c) => ({
       charityId: c.charity.id,
+      charityInfo: {
+        id: c.charity.id,
+        name: c.charity.name,
+        description: c.charity.description,
+        logo: c.charity.logo,
+        imageUrl: c.charity.imageUrl,
+      },
       goalAmount: c.goalAmount,
       priority: c.priority,
     }));

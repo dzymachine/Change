@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CharityPicker } from "@/components/onboarding/CharityPicker";
-import type { Charity } from "@/lib/charities/data";
+import { CharityPicker, type Charity } from "@/components/onboarding/CharityPicker";
 
 export default function OnboardingCharitiesPage() {
   const router = useRouter();
