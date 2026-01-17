@@ -3,6 +3,7 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { calculateRoundup } from "@/lib/donations/calculate";
+import { allocateRoundupToCharity } from "@/lib/donations/allocate";
 import { plaidClient } from "./client";
 import { Transaction as PlaidTransactionType, RemovedTransaction } from "plaid";
 
@@ -17,9 +18,6 @@ interface PlaidTransaction {
   pending: boolean;
 }
 
-// Store cursor for incremental sync per item
-const syncCursors: Map<string, string> = new Map();
-
 /**
  * Sync transactions for a specific Plaid item
  * Called when webhook notifies us of new transactions
@@ -30,7 +28,7 @@ export async function syncTransactionsForItem(itemId: string): Promise<void> {
   // Get the linked account from our database
   const { data: linkedAccount, error: fetchError } = await supabaseAdmin
     .from("linked_accounts")
-    .select("id, user_id, plaid_access_token")
+    .select("id, user_id, plaid_access_token, sync_cursor")
     .eq("plaid_item_id", itemId)
     .single();
 
@@ -40,8 +38,8 @@ export async function syncTransactionsForItem(itemId: string): Promise<void> {
   }
 
   try {
-    // Get cursor for incremental sync
-    const cursor = syncCursors.get(itemId);
+    // Get cursor for incremental sync from database
+    const cursor = linkedAccount.sync_cursor || undefined;
 
     // Fetch transactions from Plaid using sync endpoint
     const response = await plaidClient.transactionsSync({
@@ -52,30 +50,72 @@ export async function syncTransactionsForItem(itemId: string): Promise<void> {
     const { added, modified, removed, next_cursor, has_more } = response.data;
 
     // Process transactions
-    await processNewTransactions(
-      linkedAccount.id, 
-      linkedAccount.user_id, 
+    const newTxCount = await processNewTransactions(
+      linkedAccount.id,
+      linkedAccount.user_id,
       added.map(mapPlaidTransaction)
     );
     await processModifiedTransactions(
-      linkedAccount.id, 
+      linkedAccount.id,
       modified.map(mapPlaidTransaction)
     );
     await processRemovedTransactions(
       removed.map((r: RemovedTransaction) => r.transaction_id)
     );
 
-    // Store cursor for next sync
-    syncCursors.set(itemId, next_cursor);
+    // Store cursor in database for next sync
+    await supabaseAdmin
+      .from("linked_accounts")
+      .update({
+        sync_cursor: next_cursor,
+        last_synced_at: new Date().toISOString(),
+      })
+      .eq("id", linkedAccount.id);
 
     // If there are more transactions, continue syncing
     if (has_more) {
       await syncTransactionsForItem(itemId);
     }
 
-    console.log(`Synced ${added.length} new, ${modified.length} modified, ${removed.length} removed transactions`);
+    console.log(
+      `Synced ${added.length} new, ${modified.length} modified, ${removed.length} removed transactions`
+    );
+
+    // Process donations for new settled transactions
+    if (newTxCount > 0) {
+      await processNewDonations(linkedAccount.user_id);
+    }
   } catch (error) {
     console.error("Error syncing transactions:", error);
+  }
+}
+
+/**
+ * Process donations for newly synced transactions
+ * Allocates round-ups to charities based on user's donation mode
+ */
+async function processNewDonations(userId: string): Promise<void> {
+  // Get unprocessed, settled transactions
+  const { data: transactions, error } = await supabaseAdmin
+    .from("transactions")
+    .select("id, roundup_amount")
+    .eq("user_id", userId)
+    .eq("processed_for_donation", false)
+    .eq("is_pending", false)
+    .eq("is_donation", false);
+
+  if (error || !transactions || transactions.length === 0) {
+    return;
+  }
+
+  // Process each transaction
+  for (const tx of transactions) {
+    const result = await allocateRoundupToCharity(userId, tx.id, tx.roundup_amount);
+    if (result.success) {
+      console.log(
+        `Allocated $${tx.roundup_amount} to charity ${result.charityId}`
+      );
+    }
   }
 }
 
@@ -97,12 +137,13 @@ function mapPlaidTransaction(tx: PlaidTransactionType): PlaidTransaction {
 
 /**
  * Process newly added transactions
+ * Returns the number of transactions inserted
  */
 async function processNewTransactions(
   linkedAccountId: string,
   userId: string,
   transactions: PlaidTransaction[]
-): Promise<void> {
+): Promise<number> {
   const transactionsToInsert = transactions
     .filter((tx) => !isChangeTransaction(tx)) // Filter out our own donations
     .filter((tx) => tx.amount > 0) // Only process debits (spending)
@@ -122,7 +163,7 @@ async function processNewTransactions(
 
   if (transactionsToInsert.length === 0) {
     console.log("No new transactions to insert");
-    return;
+    return 0;
   }
 
   const { error } = await supabaseAdmin
@@ -133,9 +174,11 @@ async function processNewTransactions(
 
   if (error) {
     console.error("Failed to insert transactions:", error);
-  } else {
-    console.log(`Inserted ${transactionsToInsert.length} transactions`);
+    return 0;
   }
+
+  console.log(`Inserted ${transactionsToInsert.length} transactions`);
+  return transactionsToInsert.length;
 }
 
 /**

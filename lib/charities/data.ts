@@ -3,6 +3,7 @@ export interface Charity {
   name: string;
   description: string;
   logo: string;
+  imageUrl?: string;
 }
 
 // Mock charities - will be replaced with real data from database

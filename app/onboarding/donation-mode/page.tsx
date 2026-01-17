@@ -21,38 +21,110 @@ export default function OnboardingDonationModePage() {
 
   // Load charities from sessionStorage
   useEffect(() => {
+    let isMounted = true;
+    const cleanup = () => {
+      isMounted = false;
+    };
     const storedCharities = sessionStorage.getItem("onboarding_charities");
     const storedGoals = sessionStorage.getItem("onboarding_goals");
 
     if (!storedCharities || !storedGoals) {
       router.push("/onboarding/charities");
-      return;
+      return cleanup;
     }
 
-    const charityIds: string[] = JSON.parse(storedCharities);
-    const goals: { charityId: string; goalAmount: number }[] =
-      JSON.parse(storedGoals);
+    let parsedCharities: unknown;
+    let goals: { charityId: string; goalAmount: number }[] = [];
 
-    // If only 1 charity, skip this page
-    if (charityIds.length <= 1) {
-      router.push("/onboarding/plaid");
-      return;
+    try {
+      parsedCharities = JSON.parse(storedCharities);
+      goals = JSON.parse(storedGoals);
+    } catch {
+      router.push("/onboarding/charities");
+      return cleanup;
     }
 
-    const charitiesWithGoals = charityIds
-      .map((id, index) => {
-        const charity = mockCharities.find((c) => c.id === id);
-        const goal = goals.find((g) => g.charityId === id);
-        if (!charity || !goal) return null;
-        return {
-          charity,
-          goalAmount: goal.goalAmount,
-          priority: index + 1,
-        };
-      })
-      .filter((c): c is CharityWithGoal => c !== null);
+    const isCharity = (value: unknown): value is Charity =>
+      Boolean(
+        value &&
+          typeof value === "object" &&
+          "id" in value &&
+          "name" in value
+      );
 
-    setCharities(charitiesWithGoals);
+    const buildCharities = (ids: string[], list: Charity[]) =>
+      ids
+        .map((id, index) => {
+          const charity = list.find((c) => c.id === id);
+          const goal = goals.find((g) => g.charityId === id);
+          if (!charity || !goal) return null;
+          return {
+            charity,
+            goalAmount: goal.goalAmount,
+            priority: index + 1,
+          };
+        })
+        .filter((c): c is CharityWithGoal => c !== null);
+
+    const loadFromIds = async (ids: string[]) => {
+      try {
+        const response = await fetch("/api/globalgiving/featured");
+        if (response.ok) {
+          const data = await response.json();
+          const fromApi = Array.isArray(data.charities)
+            ? (data.charities as Charity[])
+            : [];
+          const charitiesWithGoals = buildCharities(ids, fromApi);
+          if (isMounted && charitiesWithGoals.length > 0) {
+            setCharities(charitiesWithGoals);
+            return;
+          }
+        }
+      } catch {
+        // Fall back to mock data
+      }
+
+      const charitiesWithGoals = buildCharities(ids, mockCharities);
+      if (isMounted) {
+        if (charitiesWithGoals.length === 0) {
+          router.push("/onboarding/charities");
+          return;
+        }
+        setCharities(charitiesWithGoals);
+      }
+    };
+
+    if (
+      Array.isArray(parsedCharities) &&
+      parsedCharities.every((item) => typeof item === "string")
+    ) {
+      const ids = parsedCharities;
+      if (ids.length <= 1) {
+        router.push("/onboarding/plaid");
+        return cleanup;
+      }
+      loadFromIds(ids);
+      return cleanup;
+    }
+
+    if (Array.isArray(parsedCharities)) {
+      const charities = parsedCharities.filter(isCharity);
+      if (charities.length <= 1) {
+        router.push("/onboarding/plaid");
+        return cleanup;
+      }
+      const ids = charities.map((charity) => charity.id);
+      const charitiesWithGoals = buildCharities(ids, charities);
+      if (charitiesWithGoals.length === 0) {
+        router.push("/onboarding/charities");
+        return cleanup;
+      }
+      setCharities(charitiesWithGoals);
+      return cleanup;
+    }
+
+    router.push("/onboarding/charities");
+    return cleanup;
   }, [router]);
 
   const handleDragStart = (index: number) => {
