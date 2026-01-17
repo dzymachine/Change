@@ -6,13 +6,22 @@ import { mockCharities } from "@/lib/charities/data";
 // Re-export for backward compatibility
 export { mockCharities, type Charity } from "@/lib/charities/data";
 
-interface CharityPickerProps {
-  selected: string[];
-  onToggle: (charityId: string) => void;
+interface Charity {
+  id: string;
+  name: string;
+  description: string;
+  logo: string;
+  imageUrl?: string;
 }
 
-export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
-  const [charities, setCharities] = useState(mockCharities);
+interface CharityPickerProps {
+  selected: string[];
+  onToggle: (charityId: string, charity?: Charity) => void;
+  onCharityData?: (setter: (prev: Map<string, Charity>) => Map<string, Charity>) => void;
+}
+
+export function CharityPicker({ selected, onToggle, onCharityData }: CharityPickerProps) {
+  const [charities, setCharities] = useState<Charity[]>(mockCharities);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,6 +38,14 @@ export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
         const data = await response.json();
         if (isMounted && Array.isArray(data.charities)) {
           setCharities(data.charities);
+          // Pass all charity data to parent
+          if (onCharityData) {
+            onCharityData(() => {
+              const map = new Map<string, Charity>();
+              data.charities.forEach((c: Charity) => map.set(c.id, c));
+              return map;
+            });
+          }
         }
       } catch (err) {
         if (isMounted) {
@@ -48,7 +65,7 @@ export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [onCharityData]);
 
   if (loading) {
     return (
@@ -74,7 +91,7 @@ export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
         return (
           <button
             key={charity.id}
-            onClick={() => onToggle(charity.id)}
+            onClick={() => onToggle(charity.id, charity)}
             className={`p-4 rounded-xl border-2 text-left transition-all ${
               isSelected
                 ? "border-emerald-500 bg-emerald-50"

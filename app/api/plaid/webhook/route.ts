@@ -32,15 +32,58 @@ interface PlaidWebhookPayload {
   removed_transactions?: string[];
 }
 
+// In-memory webhook log for debugging (resets on server restart)
+// In production, you'd store this in a database
+interface WebhookLogEntry {
+  id: string;
+  timestamp: string;
+  payload: PlaidWebhookPayload;
+  status: "received" | "processed" | "error";
+  error?: string;
+  processingTimeMs?: number;
+}
+
+const webhookLog: WebhookLogEntry[] = [];
+const MAX_LOG_ENTRIES = 50;
+
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  const logId = `wh_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  
   try {
     const body: PlaidWebhookPayload = await request.json();
     
-    console.log("Plaid webhook received:", {
-      type: body.webhook_type,
-      code: body.webhook_code,
-      item_id: body.item_id,
-    });
+    // Log the full webhook payload for debugging
+    console.log("\n" + "=".repeat(60));
+    console.log("📨 PLAID WEBHOOK RECEIVED");
+    console.log("=".repeat(60));
+    console.log("ID:", logId);
+    console.log("Time:", new Date().toISOString());
+    console.log("Type:", body.webhook_type);
+    console.log("Code:", body.webhook_code);
+    console.log("Item ID:", body.item_id);
+    if (body.new_transactions) {
+      console.log("New Transactions:", body.new_transactions);
+    }
+    if (body.error) {
+      console.log("Error:", JSON.stringify(body.error, null, 2));
+    }
+    console.log("Full Payload:", JSON.stringify(body, null, 2));
+    console.log("=".repeat(60) + "\n");
+
+    // Add to in-memory log
+    const logEntry: WebhookLogEntry = {
+      id: logId,
+      timestamp: new Date().toISOString(),
+      payload: body,
+      status: "received",
+    };
+    webhookLog.unshift(logEntry);
+    
+    // Keep only last N entries
+    if (webhookLog.length > MAX_LOG_ENTRIES) {
+      webhookLog.pop();
+    }
 
     // Handle different webhook types
     switch (body.webhook_type) {
@@ -56,15 +99,48 @@ export async function POST(request: NextRequest) {
         console.log("Unhandled webhook type:", body.webhook_type);
     }
 
-    return NextResponse.json({ received: true });
+    // Update log entry with success
+    const entry = webhookLog.find(e => e.id === logId);
+    if (entry) {
+      entry.status = "processed";
+      entry.processingTimeMs = Date.now() - startTime;
+    }
+
+    console.log(`✅ Webhook ${logId} processed in ${Date.now() - startTime}ms\n`);
+    return NextResponse.json({ received: true, id: logId });
 
   } catch (error) {
-    console.error("Webhook error:", error);
+    console.error("\n❌ WEBHOOK ERROR:", error);
+    
+    // Update log entry with error
+    const entry = webhookLog.find(e => e.id === logId);
+    if (entry) {
+      entry.status = "error";
+      entry.error = error instanceof Error ? error.message : String(error);
+      entry.processingTimeMs = Date.now() - startTime;
+    }
+    
     return NextResponse.json(
-      { error: "Webhook processing failed" },
+      { error: "Webhook processing failed", id: logId },
       { status: 500 }
     );
   }
+}
+
+// GET endpoint to view webhook log (debug only)
+export async function GET() {
+  if (process.env.NODE_ENV !== "development") {
+    return NextResponse.json(
+      { error: "Not available in production" },
+      { status: 403 }
+    );
+  }
+
+  return NextResponse.json({
+    total: webhookLog.length,
+    webhooks: webhookLog,
+    note: "This log resets when the server restarts",
+  });
 }
 
 async function handleTransactionWebhook(payload: PlaidWebhookPayload) {

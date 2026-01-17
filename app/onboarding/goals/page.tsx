@@ -2,8 +2,15 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { mockCharities, type Charity } from "@/lib/charities/data";
 import { saveCharityGoals } from "@/actions/donations";
+
+interface Charity {
+  id: string;
+  name: string;
+  description: string;
+  logo: string;
+  imageUrl?: string;
+}
 
 interface CharityGoal {
   charityId: string;
@@ -26,7 +33,7 @@ export default function OnboardingGoalsPage() {
   // Determine total steps: 4 if >1 charity (includes donation-mode), 3 otherwise
   const totalSteps = selectedCharities.length > 1 ? 4 : 3;
 
-  // Load selected charities from sessionStorage
+  // Load selected charities from sessionStorage (now stored as full objects)
   useEffect(() => {
     const stored = sessionStorage.getItem("onboarding_charities");
     if (!stored) {
@@ -34,17 +41,18 @@ export default function OnboardingGoalsPage() {
       return;
     }
 
-    const charityIds: string[] = JSON.parse(stored);
-    const charities = charityIds
-      .map((id) => mockCharities.find((c) => c.id === id))
-      .filter((c): c is Charity => c !== undefined);
+    try {
+      const charities: Charity[] = JSON.parse(stored);
+      
+      if (!Array.isArray(charities) || charities.length === 0) {
+        router.push("/onboarding/charities");
+        return;
+      }
 
-    if (charities.length === 0) {
+      setSelectedCharities(charities);
+    } catch {
       router.push("/onboarding/charities");
-      return;
     }
-
-    setSelectedCharities(charities);
   }, [router]);
 
   // Focus input when charity changes
@@ -169,10 +177,18 @@ export default function OnboardingGoalsPage() {
           }`}
         >
           <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 text-center space-y-6">
-            <div className="text-6xl">{currentCharity.logo}</div>
+            {currentCharity.imageUrl ? (
+              <img
+                src={currentCharity.imageUrl}
+                alt={currentCharity.name}
+                className="w-24 h-24 mx-auto rounded-xl object-cover"
+              />
+            ) : (
+              <div className="text-6xl">{currentCharity.logo}</div>
+            )}
             <div>
               <h2 className="text-2xl font-bold text-black">{currentCharity.name}</h2>
-              <p className="text-gray-500 mt-1">{currentCharity.description}</p>
+              <p className="text-gray-500 mt-1 line-clamp-3">{currentCharity.description}</p>
             </div>
 
             <div className="space-y-2">
