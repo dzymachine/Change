@@ -200,6 +200,7 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
                 backgroundColor: "var(--green)",
                 color: "var(--white)",
                 fontWeight: 500,
+                borderRadius: "9999px",
               }}
             >
               Simulate Payment
@@ -207,7 +208,7 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
 
             <div 
               className="flex items-center p-1"
-              style={{ backgroundColor: "rgba(162, 137, 108, 0.08)" }}
+              style={{ backgroundColor: "rgba(162, 137, 108, 0.08)", borderRadius: "9999px" }}
             >
               {timeRanges.map((range) => (
                 <button
@@ -219,6 +220,7 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
                     color: timeRange === range ? "var(--foreground)" : "var(--muted)",
                     fontWeight: timeRange === range ? 600 : 400,
                     boxShadow: timeRange === range ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                    borderRadius: "9999px",
                   }}
                 >
                   {range}
