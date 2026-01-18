@@ -62,7 +62,7 @@ export async function exchangePlaidToken(
     console.log("[exchangePlaidToken] Account saved, priming initial sync...");
     
     // Prime the initial sync (runs in background)
-    syncTransactionsForItem(item_id).catch((err) => {
+    syncTransactionsForItem(item_id, { trigger: "link" }).catch((err) => {
       console.error("[exchangePlaidToken] Initial sync failed:", err);
     });
 

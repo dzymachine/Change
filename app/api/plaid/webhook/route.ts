@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { syncTransactionsForItem } from "@/lib/plaid/sync";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { logJson } from "@/lib/log-json";
 
 // Plaid Webhook Types
 type PlaidWebhookType = 
@@ -53,23 +54,14 @@ export async function POST(request: NextRequest) {
   try {
     const body: PlaidWebhookPayload = await request.json();
     
-    // Log the full webhook payload for debugging
-    console.log("\n" + "=".repeat(60));
-    console.log("📨 PLAID WEBHOOK RECEIVED");
-    console.log("=".repeat(60));
-    console.log("ID:", logId);
-    console.log("Time:", new Date().toISOString());
-    console.log("Type:", body.webhook_type);
-    console.log("Code:", body.webhook_code);
-    console.log("Item ID:", body.item_id);
-    if (body.new_transactions) {
-      console.log("New Transactions:", body.new_transactions);
-    }
-    if (body.error) {
-      console.log("Error:", JSON.stringify(body.error, null, 2));
-    }
-    console.log("Full Payload:", JSON.stringify(body, null, 2));
-    console.log("=".repeat(60) + "\n");
+    logJson("info", "plaid.webhook.received", {
+      trace_id: logId,
+      webhook_type: body.webhook_type,
+      webhook_code: body.webhook_code,
+      item_id: body.item_id,
+      new_transactions: body.new_transactions ?? null,
+      has_error: Boolean(body.error),
+    });
 
     // Add to in-memory log
     const logEntry: WebhookLogEntry = {
@@ -88,15 +80,20 @@ export async function POST(request: NextRequest) {
     // Handle different webhook types
     switch (body.webhook_type) {
       case "TRANSACTIONS":
-        await handleTransactionWebhook(body);
+        await handleTransactionWebhook(body, logId);
         break;
       
       case "ITEM":
-        await handleItemWebhook(body);
+        await handleItemWebhook(body, logId);
         break;
       
       default:
-        console.log("Unhandled webhook type:", body.webhook_type);
+        logJson("warn", "plaid.webhook.unhandled_type", {
+          trace_id: logId,
+          webhook_type: body.webhook_type,
+          webhook_code: body.webhook_code,
+          item_id: body.item_id,
+        });
     }
 
     // Update log entry with success
@@ -106,11 +103,21 @@ export async function POST(request: NextRequest) {
       entry.processingTimeMs = Date.now() - startTime;
     }
 
-    console.log(`✅ Webhook ${logId} processed in ${Date.now() - startTime}ms\n`);
+    logJson("info", "plaid.webhook.processed", {
+      trace_id: logId,
+      webhook_type: body.webhook_type,
+      webhook_code: body.webhook_code,
+      item_id: body.item_id,
+      processing_ms: Date.now() - startTime,
+    });
     return NextResponse.json({ received: true, id: logId });
 
   } catch (error) {
-    console.error("\n❌ WEBHOOK ERROR:", error);
+    logJson("error", "plaid.webhook.error", {
+      trace_id: logId,
+      processing_ms: Date.now() - startTime,
+      error,
+    });
     
     // Update log entry with error
     const entry = webhookLog.find(e => e.id === logId);
@@ -143,7 +150,7 @@ export async function GET() {
   });
 }
 
-async function handleTransactionWebhook(payload: PlaidWebhookPayload) {
+async function handleTransactionWebhook(payload: PlaidWebhookPayload, traceId: string) {
   const { webhook_code, item_id, new_transactions } = payload;
 
   switch (webhook_code as TransactionWebhookCode) {
@@ -152,27 +159,46 @@ async function handleTransactionWebhook(payload: PlaidWebhookPayload) {
     case "HISTORICAL_UPDATE":
     case "DEFAULT_UPDATE":
       // New transactions available - trigger sync
-      console.log(`Syncing ${new_transactions} new transactions for item ${item_id}`);
-      await syncTransactionsForItem(item_id);
+      logJson("info", "plaid.webhook.sync_requested", {
+        trace_id: traceId,
+        webhook_code,
+        item_id,
+        new_transactions: new_transactions ?? null,
+      });
+      await syncTransactionsForItem(item_id, { traceId, trigger: "webhook", webhook_code });
       break;
 
     case "TRANSACTIONS_REMOVED":
       // Handle removed transactions - sync will handle this
-      console.log("Transactions removed:", payload.removed_transactions);
-      await syncTransactionsForItem(item_id);
+      logJson("info", "plaid.webhook.transactions_removed", {
+        trace_id: traceId,
+        webhook_code,
+        item_id,
+        removed_count: payload.removed_transactions?.length ?? 0,
+      });
+      await syncTransactionsForItem(item_id, { traceId, trigger: "webhook", webhook_code });
       break;
 
     default:
-      console.log("Unhandled transaction webhook code:", webhook_code);
+      logJson("warn", "plaid.webhook.unhandled_code", {
+        trace_id: traceId,
+        webhook_type: "TRANSACTIONS",
+        webhook_code,
+        item_id,
+      });
   }
 }
 
-async function handleItemWebhook(payload: PlaidWebhookPayload) {
+async function handleItemWebhook(payload: PlaidWebhookPayload, traceId: string) {
   const { webhook_code, item_id, error } = payload;
 
   switch (webhook_code) {
     case "ERROR":
-      console.error(`Item ${item_id} error:`, error);
+      logJson("error", "plaid.webhook.item_error", {
+        trace_id: traceId,
+        item_id,
+        error,
+      });
       // Mark linked account as needing re-authentication
       await supabaseAdmin
         .from("linked_accounts")
@@ -181,11 +207,18 @@ async function handleItemWebhook(payload: PlaidWebhookPayload) {
       break;
 
     case "PENDING_EXPIRATION":
-      console.warn(`Item ${item_id} access token expiring soon`);
+      logJson("warn", "plaid.webhook.item_pending_expiration", {
+        trace_id: traceId,
+        item_id,
+      });
       // TODO: Send notification to user to re-link account
       break;
 
     default:
-      console.log("Unhandled item webhook code:", webhook_code);
+      logJson("info", "plaid.webhook.item_unhandled_code", {
+        trace_id: traceId,
+        item_id,
+        webhook_code,
+      });
   }
 }

@@ -6,6 +6,7 @@ import { calculateRoundup } from "@/lib/donations/calculate";
 import { allocateRoundupToCharity } from "@/lib/donations/allocate";
 import { plaidClient } from "./client";
 import { Transaction as PlaidTransactionType, RemovedTransaction } from "plaid";
+import { logJson } from "@/lib/log-json";
 
 interface PlaidTransaction {
   transaction_id: string;
@@ -22,8 +23,17 @@ interface PlaidTransaction {
  * Sync transactions for a specific Plaid item
  * Called when webhook notifies us of new transactions
  */
-export async function syncTransactionsForItem(itemId: string): Promise<void> {
-  console.log(`Starting transaction sync for item: ${itemId}`);
+export async function syncTransactionsForItem(
+  itemId: string,
+  ctx?: { traceId?: string; trigger?: "webhook" | "manual" | "link"; webhook_code?: string }
+): Promise<void> {
+  const traceId = ctx?.traceId ?? `sync_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  logJson("info", "plaid.sync.start", {
+    trace_id: traceId,
+    item_id: itemId,
+    trigger: ctx?.trigger ?? null,
+    webhook_code: ctx?.webhook_code ?? null,
+  });
 
   // Get the linked account from our database
   const { data: linkedAccount, error: fetchError } = await supabaseAdmin
@@ -33,7 +43,11 @@ export async function syncTransactionsForItem(itemId: string): Promise<void> {
     .single();
 
   if (fetchError || !linkedAccount) {
-    console.error("Failed to find linked account:", fetchError);
+    logJson("error", "plaid.sync.no_linked_account", {
+      trace_id: traceId,
+      item_id: itemId,
+      error: fetchError?.message ?? fetchError ?? "unknown",
+    });
     return;
   }
 
@@ -48,6 +62,17 @@ export async function syncTransactionsForItem(itemId: string): Promise<void> {
     });
 
     const { added, modified, removed, next_cursor, has_more } = response.data;
+    logJson("info", "plaid.sync.fetched", {
+      trace_id: traceId,
+      item_id: itemId,
+      linked_account_id: linkedAccount.id,
+      user_id: linkedAccount.user_id,
+      cursor_present: Boolean(cursor),
+      added: added.length,
+      modified: modified.length,
+      removed: removed.length,
+      has_more,
+    });
 
     // Process transactions
     const newTxCount = await processNewTransactions(
@@ -74,19 +99,25 @@ export async function syncTransactionsForItem(itemId: string): Promise<void> {
 
     // If there are more transactions, continue syncing
     if (has_more) {
-      await syncTransactionsForItem(itemId);
+      await syncTransactionsForItem(itemId, { ...ctx, traceId });
     }
 
-    console.log(
-      `Synced ${added.length} new, ${modified.length} modified, ${removed.length} removed transactions`
-    );
+    logJson("info", "plaid.sync.applied", {
+      trace_id: traceId,
+      item_id: itemId,
+      inserted_or_upserted: newTxCount,
+      added: added.length,
+      modified: modified.length,
+      removed: removed.length,
+      has_more,
+    });
 
     // Process donations for new settled transactions
     if (newTxCount > 0) {
       await processNewDonations(linkedAccount.user_id);
     }
   } catch (error) {
-    console.error("Error syncing transactions:", error);
+    logJson("error", "plaid.sync.error", { trace_id: traceId, item_id: itemId, error });
   }
 }
 
