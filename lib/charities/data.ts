@@ -106,6 +106,128 @@ export const HARDCODED_CHARITIES: Charity[] = [
     categories: ["Climate Action"],
   },
   {
+    id: "malala-fund",
+    name: "Malala Fund",
+    description:
+      "Malala Fund works to ensure all girls can access and complete 12 years of education, emphasizing that quality schooling builds knowledge, skills, and confidence for girls to reach their potential.",
+    logo: "",
+    charityUrl: "https://malala.org/",
+    imageUrl: "https://images.ctfassets.net/0oan5gk9rgbh/jr5pb55iowGEyMsCyKkIk/9293e9e72902143ff97d923e1e32fee3/About_who_we_are_photo.jpg?w=700&h=394&fit=fill&fm=webp&f=faces",
+    categories: ["Education"],
+  },
+  {
+    id: "education-cannot-wait",
+    name: "Education Cannot Wait (ECW)",
+    description:
+      "ECW is the UN's global fund for education in emergencies and protracted crises, supporting learning outcomes for refugee, displaced, and crisis-affected children so no one is left behind.",
+    logo: "",
+    charityUrl: "https://www.educationcannotwait.org/",
+    imageUrl: "https://www.educationcannotwait.org/sites/default/files/styles/d06_square/public/2022-07/homepage_text_and_image_1.png.webp?h=c7ad779f&itok=ufqFUaIp",
+    categories: ["Education"],
+  },
+  {
+    id: "unicef",
+    name: "UNICEF",
+    description:
+      "UNICEF works to protect the rights of every child, especially the most disadvantaged, and to help children survive, thrive, and fulfill their potential across more than 190 countries and territories.",
+    logo: "",
+    charityUrl: "https://www.unicef.org/",
+    imageUrl: "https://www.unicef.org/sites/default/files/styles/press_release_feature/public/UNI448430%20%281%29.jpg.webp?itok=qS0Stqdf",
+    categories: ["Children & Youth", "Education"],
+  },
+  {
+    id: "childfund-international",
+    name: "ChildFund International",
+    description:
+      "ChildFund helps deprived, excluded, and vulnerable children build the capacity to improve their lives and become young adults, parents, and leaders who drive lasting change.",
+    logo: "",
+    charityUrl: "https://childfund.org/",
+    imageUrl: "https://www.childfund.org/contentassets/917d88bb98b3405dbdf3f81ab627d368/rs66899_231205_08435_lpr.jpg",
+    categories: ["Children & Youth"],
+  },
+  {
+    id: "partners-in-health",
+    name: "Partners In Health (PIH)",
+    description:
+      "PIH is a global health and social justice organization that works to provide high-quality health care to people who need it most, including a comprehensive model that addresses barriers like food, housing, and transportation.",
+    logo: "",
+    charityUrl: "https://www.pih.org/",
+    imageUrl: "https://www.pih.org/sites/default/files/2025-05/Haiti_20240131_Malnutrition_mjeanty_00709_960w.jpg",
+    categories: ["Health"],
+  },
+  {
+    id: "global-fund",
+    name: "The Global Fund to Fight AIDS, Tuberculosis and Malaria",
+    description:
+      "A worldwide partnership that raises and invests billions to defeat HIV, TB, and malaria, while strengthening health and community systems to support a healthier, more equitable future.",
+    logo: "",
+    charityUrl: "https://www.theglobalfund.org/",
+    imageUrl: "https://www.theglobalfund.org/media/ebsddoyv/malaria-story-02.jpg",
+    categories: ["Health"],
+  },
+  {
+    id: "gates-foundation",
+    name: "Gates Foundation",
+    description:
+      "Its mission is to help create a world where every person has the opportunity to live a healthy, productive life, including work to reduce disease and strengthen health outcomes globally.",
+    logo: "",
+    charityUrl: "https://www.gatesfoundation.org/",
+    imageUrl: "https://www.gatesfoundation.org/-/media/gfo/3about/1ourstory/home_ourstory_pga1287486_fc235844_1600x900.jpg?rev=56ef51bd4a6d40edacb51b8c09834776&w=1600&hash=CB203E93AC22194575EB3C96279ADA4E",
+    categories: ["Health"],
+  },
+  {
+    id: "malaria-consortium",
+    name: "Malaria Consortium",
+    description:
+      "Malaria Consortium exists to improve health and save lives in communities affected by malaria and related health inequities, delivering evidence-based programs and supporting stronger health systems.",
+    logo: "",
+    charityUrl: "https://www.malariaconsortium.org/",
+    imageUrl: "https://www.malariaconsortium.org/assets/global/Picture1_2025-11-28-115322_eenz.png",
+    categories: ["Health"],
+  },
+  {
+    id: "clinton-health-access-initiative",
+    name: "Clinton Health Access Initiative (CHAI)",
+    description:
+      "CHAI’s mission is to save lives and improve health outcomes in low- and middle-income countries by helping strengthen and sustain quality health systems in partnership with governments and the private sector.",
+    logo: "",
+    charityUrl: "https://www.clintonhealthaccess.org/",
+    imageUrl: "https://www.clintonhealthaccess.org/wp-content/uploads/2024/09/290518_L0A9096_CHAI_Sujata_Khanna_076-scaled.jpg",
+    categories: ["Health"],
+  },
+  {
+    id: "direct-relief",
+    name: "Direct Relief",
+    description:
+      "Direct Relief’s mission is to improve the health and lives of people affected by poverty or emergencies by providing essential medical resources, without regard to politics, religion, or ability to pay.",
+    logo: "",
+    charityUrl: "https://www.directrelief.org/",
+    imageUrl: "https://i0.wp.com/www.directrelief.org/wp-content/uploads/2021/09/DR_Florida_10_24-142.jpg?w=1304&ssl=1",
+    categories: ["Health"],
+  },
+
+  {
+    id: "egpaf",
+    name: "Elizabeth Glaser Pediatric AIDS Foundation (EGPAF)",
+    description:
+      "EGPAF focuses its mission on ending pediatric HIV and AIDS, applying its expertise across children’s health, including preventing mother-to-child transmission and expanding treatment access.",
+    logo: "",
+    charityUrl: "https://pedaids.org/",
+    imageUrl: "https://pedaids.org/wp-content/uploads/2025/10/IMG_6839-XL.jpg",
+    categories: ["Health"],
+  },
+  {
+    id: "ippf",
+    name: "International Planned Parenthood Federation (IPPF)",
+    description:
+      "IPPF is a global service provider and leading advocate for sexual and reproductive health and rights, working through member associations across many countries to expand access to care and uphold sexual rights.",
+    logo: "",
+    charityUrl: "https://www.ippf.org/",
+    imageUrl: "https://www.ippf.org/sites/default/files/styles/header_background_xxxl_2x/public/2026-01/shutterstock_2229409491_copy.webp?itok=tk3ZBOHq",
+    categories: ["Health"],
+  },
+
+  {
     id: "icrc",
     name: "International Committee of the Red Cross (ICRC)",
     description:
@@ -165,7 +287,7 @@ export const HARDCODED_CHARITIES: Charity[] = [
     logo: "",
     charityUrl: "https://www.savethechildren.org/",
     imageUrl: "https://image.savethechildren.org/lebanon-syrian-refugee-camp-child-ch194750-sq.jpg-ch11042376.jpg/2cupphn1q4301853450awkqr17kc621r.jpg?g=auto&w=768&format=webp&itok=IPKo_m0Z",
-    categories: ["Humanitarian Crises"],
+    categories: ["Humanitarian Crises", "Education", "Children & Youth"],
   },
 
   {
