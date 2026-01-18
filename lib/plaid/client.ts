@@ -1,22 +1,38 @@
 // Plaid client configuration
 import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
 
-const configuration = new Configuration({
-  basePath: PlaidEnvironments[process.env.PLAID_ENV as keyof typeof PlaidEnvironments] 
-    || PlaidEnvironments.sandbox,
-  baseOptions: {
-    headers: {
-      "PLAID-CLIENT-ID": process.env.PLAID_CLIENT_ID!,
-      "PLAID-SECRET": process.env.PLAID_SECRET!,
-    },
+let plaidClientInstance: PlaidApi | null = null;
+
+function getPlaidClient(): PlaidApi {
+  if (!plaidClientInstance) {
+    const configuration = new Configuration({
+      basePath: PlaidEnvironments[process.env.PLAID_ENV as keyof typeof PlaidEnvironments] 
+        || PlaidEnvironments.sandbox,
+      baseOptions: {
+        headers: {
+          "PLAID-CLIENT-ID": process.env.PLAID_CLIENT_ID!,
+          "PLAID-SECRET": process.env.PLAID_SECRET!,
+        },
+      },
+    });
+    plaidClientInstance = new PlaidApi(configuration);
+  }
+  return plaidClientInstance;
+}
+
+// Lazy-initialized Plaid client
+export const plaidClient = new Proxy({} as PlaidApi, {
+  get(_target, prop) {
+    return Reflect.get(getPlaidClient(), prop);
   },
 });
 
-export const plaidClient = new PlaidApi(configuration);
-
-// Environment info
+// Environment info - use getters for lazy evaluation
 export const PLAID_ENV = process.env.PLAID_ENV || "sandbox";
-export const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
+
+export function getPlaidClientId(): string | undefined {
+  return process.env.PLAID_CLIENT_ID;
+}
 
 // Check if Plaid is configured
 export function isPlaidConfigured(): boolean {

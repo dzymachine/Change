@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Supabase Admin Client
@@ -11,13 +11,32 @@ import { createClient } from "@supabase/supabase-js";
  * - Webhooks (Plaid, Stripe)
  * - Admin operations
  */
-export const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+
+let supabaseAdminInstance: SupabaseClient | null = null;
+
+export function getSupabaseAdmin(): SupabaseClient {
+  if (!supabaseAdminInstance) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error("Missing Supabase environment variables");
+    }
+    
+    supabaseAdminInstance = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
   }
-);
+  return supabaseAdminInstance;
+}
+
+// Legacy export for backward compatibility - use getSupabaseAdmin() instead
+// This getter ensures lazy initialization
+export const supabaseAdmin = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    return Reflect.get(getSupabaseAdmin(), prop);
+  },
+});
