@@ -39,6 +39,8 @@ export function CharitiesSection({
   const [isPending, startTransition] = useTransition();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulateError, setSimulateError] = useState<string | null>(null);
 
   const activeCharities = charities.filter((c) => !c.isCompleted);
   const completedCharities = charities.filter((c) => c.isCompleted);
@@ -141,6 +143,28 @@ export function CharitiesSection({
   };
 
   const existingCharityIds = charities.map((c) => c.charityId);
+  const showDebug = process.env.NODE_ENV === "development";
+
+  const handleSimulateTransaction = async () => {
+    try {
+      setIsSimulating(true);
+      setSimulateError(null);
+      const response = await fetch("/api/debug/simulate-transaction", {
+        method: "POST",
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || "Failed to simulate transaction");
+      }
+      window.location.reload();
+    } catch (error) {
+      setSimulateError(
+        error instanceof Error ? error.message : "Failed to simulate transaction"
+      );
+    } finally {
+      setIsSimulating(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -179,6 +203,15 @@ export function CharitiesSection({
         </div>
 
         <div className="flex items-center gap-2">
+          {showDebug && (
+            <button
+              onClick={handleSimulateTransaction}
+              disabled={isSimulating}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            >
+              {isSimulating ? "Simulating..." : "Simulate payment"}
+            </button>
+          )}
           {/* Active/Completed filter tiles */}
           <div className="flex items-center bg-gray-100 rounded-lg p-1 mr-2">
             <button
@@ -305,6 +338,11 @@ export function CharitiesSection({
       {mode === "priority" && !showCompleted && activeCharities.length > 1 && (
         <p className="text-xs text-gray-600 text-center mt-4">
           Drag to reorder priorities
+        </p>
+      )}
+      {simulateError && (
+        <p className="text-xs text-red-500 text-center mt-2">
+          {simulateError}
         </p>
       )}
 

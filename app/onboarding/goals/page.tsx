@@ -262,7 +262,15 @@ export default function OnboardingGoalsPage() {
           }`}
         >
           <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 text-center space-y-6">
-            <div className="text-6xl">{currentCharity.logo}</div>
+            {currentCharity.imageUrl ? (
+              <img
+                src={currentCharity.imageUrl}
+                alt={currentCharity.name}
+                className="mx-auto h-28 w-28 rounded-2xl object-cover"
+              />
+            ) : (
+              <div className="text-6xl">{currentCharity.logo}</div>
+            )}
             <div>
               <h2 className="text-2xl font-bold text-black">{currentCharity.name}</h2>
               <p className="text-gray-500 mt-1">{currentCharity.description}</p>

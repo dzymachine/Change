@@ -7,6 +7,7 @@
  */
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { sendDonationEmail } from "@/lib/email/sendDonationEmail";
 
 interface AllocationResult {
   success: boolean;
@@ -197,6 +198,37 @@ export async function allocateRoundupToCharity(
 
   if (markError) {
     console.error("[allocateRoundupToCharity] Failed to mark transaction as processed:", markError);
+  }
+
+  try {
+    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("email")
+      .eq("id", userId)
+      .single();
+
+    const { data: charity } = await supabaseAdmin
+      .from("user_charities")
+      .select("charity_name")
+      .eq("user_id", userId)
+      .eq("charity_id", allocations[0].charityId)
+      .maybeSingle();
+
+    const email = authUser?.user?.email || profile?.email || undefined;
+    if (email) {
+      await sendDonationEmail({
+        to: email,
+        amount: roundToCents(toNumber(roundupAmount)),
+        charityName: charity?.charity_name || undefined,
+        transactionId,
+      });
+      console.log("[allocateRoundupToCharity] Donation email sent");
+    } else {
+      console.warn("[allocateRoundupToCharity] No email found for user");
+    }
+  } catch (error) {
+    console.error("Failed to send donation email:", error);
   }
 
   // In priority mode, keep selected_charity_id pointing at the highest-priority active charity.
