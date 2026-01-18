@@ -37,6 +37,22 @@ export async function GET(request: NextRequest) {
       env: PLAID_ENV,
       configured: isPlaidConfigured(),
       webhook_url_set: has(process.env.PLAID_WEBHOOK_URL),
+      webhook_url_preview: process.env.PLAID_WEBHOOK_URL 
+        ? process.env.PLAID_WEBHOOK_URL.replace(/^(https?:\/\/[^\/]+).*$/, '$1/...')
+        : null,
+    },
+    production_readiness: {
+      is_production: PLAID_ENV === "production",
+      checklist: {
+        plaid_configured: isPlaidConfigured(),
+        webhook_url_set: has(process.env.PLAID_WEBHOOK_URL),
+        supabase_configured: has(process.env.NEXT_PUBLIC_SUPABASE_URL) && has(process.env.SUPABASE_SERVICE_ROLE_KEY),
+      },
+      ready: PLAID_ENV === "production" && 
+             isPlaidConfigured() && 
+             has(process.env.PLAID_WEBHOOK_URL) &&
+             has(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+             has(process.env.SUPABASE_SERVICE_ROLE_KEY),
     },
   });
 }
