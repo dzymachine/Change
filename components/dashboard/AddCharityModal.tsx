@@ -33,6 +33,7 @@ export function AddCharityModal({
 }: AddCharityModalProps) {
   const [step, setStep] = useState<"select" | "goals">("select");
   const [selectedCharities, setSelectedCharities] = useState<Charity[]>([]);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [goalAmounts, setGoalAmounts] = useState<Record<string, string>>({});
   const [goalError, setGoalError] = useState<string | null>(null);
   const goalInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -44,6 +45,7 @@ export function AddCharityModal({
     if (!isOpen) return;
     setStep("select");
     setSelectedCharities([]);
+    setExpandedIds(new Set());
     setGoalAmounts({});
     setGoalError(null);
 
@@ -89,6 +91,18 @@ export function AddCharityModal({
         [charity.id]: current[charity.id] ?? "5.00",
       }));
       return [...prev, charity];
+    });
+  };
+
+  const toggleExpanded = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
     });
   };
 
@@ -173,37 +187,65 @@ export function AddCharityModal({
                 <p className="text-xs text-gray-500">
                   Select up to {maxSelectable} charities
                 </p>
-                {availableCharities.map((charity) => (
-                  <button
-                    key={charity.id}
-                    onClick={() => toggleCharity(charity)}
-                    className={`w-full p-4 rounded-xl border text-left transition-all ${
-                      selectedCharities.some((item) => item.id === charity.id)
-                        ? "border-emerald-500 bg-emerald-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-20 h-20 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0">
-                        {charity.imageUrl ? (
-                          <img
-                            src={charity.imageUrl}
-                            alt={charity.name}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-3xl">{charity.logo}</span>
-                        )}
+                {availableCharities.map((charity) => {
+                  const isExpanded = expandedIds.has(charity.id);
+
+                  return (
+                    <button
+                      key={charity.id}
+                      onClick={() => toggleCharity(charity)}
+                      className={`w-full p-4 rounded-xl border text-left transition-all ${
+                        selectedCharities.some((item) => item.id === charity.id)
+                          ? "border-emerald-500 bg-emerald-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-20 h-20 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0">
+                          {charity.imageUrl ? (
+                            <img
+                              src={charity.imageUrl}
+                              alt={charity.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-3xl">{charity.logo}</span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-black">{charity.name}</p>
+                          <p
+                            className={`text-sm text-gray-500 ${
+                              isExpanded ? "" : "line-clamp-2"
+                            }`}
+                          >
+                            {charity.description}
+                          </p>
+                          {charity.description.length > 80 && (
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                toggleExpanded(charity.id);
+                              }}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  toggleExpanded(charity.id);
+                                }
+                              }}
+                              className="text-sm text-emerald-600 hover:underline mt-1 inline-flex"
+                            >
+                              {isExpanded ? "Read less" : "Read more"}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-black">{charity.name}</p>
-                        <p className="text-sm text-gray-500">
-                          {charity.description}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             )
           ) : (

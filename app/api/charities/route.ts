@@ -80,6 +80,12 @@ interface GlobalGivingProject {
   };
 }
 
+// Optional overrides for GlobalGiving images.
+// Key by GlobalGiving project ID (string), value is the image URL to display.
+const GLOBALGIVING_IMAGE_OVERRIDES: Record<string, string> = {
+  // "12345": "https://example.com/your-image.jpg",
+};
+
 // Extract ALL matching categories for a project
 function extractCategories(project: GlobalGivingProject): CharityCategory[] {
   const themes = project.themes?.theme;
@@ -98,6 +104,7 @@ function extractCategories(project: GlobalGivingProject): CharityCategory[] {
 
 function processProject(project: GlobalGivingProject) {
   let imageUrl: string | undefined;
+  const overrideImageUrl = GLOBALGIVING_IMAGE_OVERRIDES[String(project.id)];
   
   const pickHighRes = (urls: string[]): string | undefined => {
     if (urls.length === 0) return undefined;
@@ -107,7 +114,9 @@ function processProject(project: GlobalGivingProject) {
     return preferred ?? urls[urls.length - 1];
   };
 
-  if (typeof project.imageLink === "string") {
+  if (overrideImageUrl) {
+    imageUrl = overrideImageUrl;
+  } else if (typeof project.imageLink === "string") {
     imageUrl = project.imageLink;
   } else if (project.image?.imagelink) {
     if (Array.isArray(project.image.imagelink)) {
