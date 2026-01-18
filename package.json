@@ -12,6 +12,8 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/storage-js": "^2.90.1",
     "@supabase/supabase-js": "^2.90.1",
+    "@vercel/functions": "^3.3.6",
+    "jose": "^6.1.3",
     "next": "16.1.2",
     "nodemailer": "^7.0.12",
     "plaid": "^41.0.0",

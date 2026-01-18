@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { syncTransactionsForItem } from "@/lib/plaid/sync";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logJson } from "@/lib/log-json";
+import { verifyPlaidWebhook } from "@/lib/plaid/verify-webhook";
 import { isDebugAuthorized } from "@/lib/debug-auth";
 
 // Plaid Webhook Types
@@ -34,37 +36,62 @@ interface PlaidWebhookPayload {
   removed_transactions?: string[];
 }
 
-// In-memory webhook log for debugging (resets on server restart)
-// In production, you'd store this in a database
-interface WebhookLogEntry {
-  id: string;
-  timestamp: string;
-  payload: PlaidWebhookPayload;
-  status: "received" | "processed" | "error";
-  error?: string;
-  processingTimeMs?: number;
-}
-
-const webhookLog: WebhookLogEntry[] = [];
-const MAX_LOG_ENTRIES = 50;
-
+/**
+ * Plaid Webhook Handler
+ * 
+ * CRITICAL: This handler responds with 200 immediately (within a few hundred ms)
+ * and processes the webhook asynchronously in the background.
+ * 
+ * Plaid expects a 200 response within 10 seconds, and will retry on failure.
+ * By responding immediately, we ensure reliability.
+ */
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   const logId = `wh_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
   
+  // Get raw body for verification AND parsing
+  // We need the raw text for signature verification
+  const rawBody = await request.text();
+  let body: PlaidWebhookPayload;
+  
   try {
-    const body: PlaidWebhookPayload = await request.json();
-    
-    logJson("info", "plaid.webhook.received", {
+    body = JSON.parse(rawBody);
+  } catch {
+    logJson("error", "plaid.webhook.invalid_json", { trace_id: logId });
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  // Verify webhook authenticity
+  const plaidVerificationHeader = request.headers.get("Plaid-Verification");
+  const verification = await verifyPlaidWebhook(rawBody, plaidVerificationHeader);
+  
+  if (!verification.verified) {
+    logJson("error", "plaid.webhook.verification_failed", {
       trace_id: logId,
+      error: verification.error,
       webhook_type: body.webhook_type,
       webhook_code: body.webhook_code,
       item_id: body.item_id,
-      new_transactions: body.new_transactions ?? null,
-      has_error: Boolean(body.error),
     });
+    return NextResponse.json(
+      { error: "Webhook verification failed", reason: verification.error },
+      { status: 401 }
+    );
+  }
 
-    // Persist webhook receipt for environments where logs aren't accessible (e.g., Vercel)
+  logJson("info", "plaid.webhook.received", {
+    trace_id: logId,
+    webhook_type: body.webhook_type,
+    webhook_code: body.webhook_code,
+    item_id: body.item_id,
+    new_transactions: body.new_transactions ?? null,
+    has_error: Boolean(body.error),
+    verification_skipped: verification.skipped ?? false,
+    response_time_ms: Date.now() - startTime,
+  });
+
+  // Persist webhook receipt immediately (non-blocking)
+  const persistPromise = (async () => {
     try {
       await supabaseAdmin.from("plaid_webhook_events").insert({
         trace_id: logId,
@@ -74,103 +101,106 @@ export async function POST(request: NextRequest) {
         payload: body,
         status: "received",
       });
-    } catch (persistError) {
-      logJson("warn", "plaid.webhook.persist_failed", { trace_id: logId, error: persistError });
+    } catch (err: unknown) {
+      logJson("warn", "plaid.webhook.persist_failed", { trace_id: logId, error: err });
     }
+  })();
 
-    // Add to in-memory log
-    const logEntry: WebhookLogEntry = {
-      id: logId,
-      timestamp: new Date().toISOString(),
-      payload: body,
-      status: "received",
-    };
-    webhookLog.unshift(logEntry);
-    
-    // Keep only last N entries
-    if (webhookLog.length > MAX_LOG_ENTRIES) {
-      webhookLog.pop();
+  // Process the webhook in the background using Vercel's waitUntil
+  // This allows us to respond with 200 immediately while processing continues
+  const processingPromise = processWebhookAsync(body, logId, startTime);
+
+  // Use waitUntil to ensure processing completes even after response is sent
+  // This works on Vercel and falls back to fire-and-forget locally
+  const backgroundWork = Promise.all([persistPromise, processingPromise]);
+  
+  if (typeof waitUntil === "function") {
+    try {
+      waitUntil(backgroundWork);
+    } catch {
+      // waitUntil may not be available in all environments
+      // Fall back to awaiting in development
+      if (process.env.NODE_ENV === "development") {
+        await backgroundWork;
+      }
     }
+  } else if (process.env.NODE_ENV === "development") {
+    // In local dev without Vercel runtime, wait for processing
+    await backgroundWork;
+  }
 
+  // Return 200 immediately - processing continues in background
+  return NextResponse.json({ 
+    received: true, 
+    id: logId,
+    response_time_ms: Date.now() - startTime,
+  });
+}
+
+/**
+ * Process webhook asynchronously (runs in background after 200 response)
+ */
+async function processWebhookAsync(
+  body: PlaidWebhookPayload, 
+  traceId: string, 
+  startTime: number
+): Promise<void> {
+  try {
     // Handle different webhook types
     switch (body.webhook_type) {
       case "TRANSACTIONS":
-        await handleTransactionWebhook(body, logId);
+        await handleTransactionWebhook(body, traceId);
         break;
       
       case "ITEM":
-        await handleItemWebhook(body, logId);
+        await handleItemWebhook(body, traceId);
         break;
       
       default:
         logJson("warn", "plaid.webhook.unhandled_type", {
-          trace_id: logId,
+          trace_id: traceId,
           webhook_type: body.webhook_type,
           webhook_code: body.webhook_code,
           item_id: body.item_id,
         });
     }
 
-    // Update log entry with success
-    const entry = webhookLog.find(e => e.id === logId);
-    if (entry) {
-      entry.status = "processed";
-      entry.processingTimeMs = Date.now() - startTime;
-    }
-
     logJson("info", "plaid.webhook.processed", {
-      trace_id: logId,
+      trace_id: traceId,
       webhook_type: body.webhook_type,
       webhook_code: body.webhook_code,
       item_id: body.item_id,
-      processing_ms: Date.now() - startTime,
+      total_processing_ms: Date.now() - startTime,
     });
 
-    try {
-      await supabaseAdmin
-        .from("plaid_webhook_events")
-        .update({
-          status: "processed",
-          processing_time_ms: Date.now() - startTime,
-        })
-        .eq("trace_id", logId);
-    } catch (persistError) {
-      logJson("warn", "plaid.webhook.persist_failed", { trace_id: logId, error: persistError });
-    }
-    return NextResponse.json({ received: true, id: logId });
+    // Update webhook event status
+    await supabaseAdmin
+      .from("plaid_webhook_events")
+      .update({
+        status: "processed",
+        processing_time_ms: Date.now() - startTime,
+      })
+      .eq("trace_id", traceId);
 
   } catch (error) {
-    logJson("error", "plaid.webhook.error", {
-      trace_id: logId,
-      processing_ms: Date.now() - startTime,
+    logJson("error", "plaid.webhook.processing_error", {
+      trace_id: traceId,
+      webhook_type: body.webhook_type,
+      webhook_code: body.webhook_code,
+      item_id: body.item_id,
       error,
+      total_processing_ms: Date.now() - startTime,
     });
-    
-    // Update log entry with error
-    const entry = webhookLog.find(e => e.id === logId);
-    if (entry) {
-      entry.status = "error";
-      entry.error = error instanceof Error ? error.message : String(error);
-      entry.processingTimeMs = Date.now() - startTime;
-    }
 
-    try {
-      await supabaseAdmin
-        .from("plaid_webhook_events")
-        .update({
-          status: "error",
-          error: error instanceof Error ? error.message : String(error),
-          processing_time_ms: Date.now() - startTime,
-        })
-        .eq("trace_id", logId);
-    } catch (persistError) {
-      logJson("warn", "plaid.webhook.persist_failed", { trace_id: logId, error: persistError });
-    }
-    
-    return NextResponse.json(
-      { error: "Webhook processing failed", id: logId },
-      { status: 500 }
-    );
+    // Update webhook event with error
+    await supabaseAdmin
+      .from("plaid_webhook_events")
+      .update({
+        status: "error",
+        error: error instanceof Error ? error.message : String(error),
+        processing_time_ms: Date.now() - startTime,
+      })
+      .eq("trace_id", traceId);
   }
 }
 
@@ -202,9 +232,22 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Also fetch recent sync runs for correlation
+  const { data: syncRuns } = await supabaseAdmin
+    .from("plaid_sync_runs")
+    .select("trace_id, item_id, trigger, webhook_code, added_count, modified_count, removed_count, inserted_or_upserted, status, error, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
   return NextResponse.json({
-    total: events?.length || 0,
-    events: events || [],
+    webhook_events: {
+      total: events?.length || 0,
+      events: events || [],
+    },
+    sync_runs: {
+      total: syncRuns?.length || 0,
+      runs: syncRuns || [],
+    },
     note: "Stored in Supabase (persistent)",
   });
 }
