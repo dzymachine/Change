@@ -94,12 +94,17 @@ export function CharitiesSection({
   };
 
   const handleAddCharities = async (
-    charitiesToAdd: { id: string; name?: string; logo?: string; imageUrl?: string }[],
-    goalAmount: number
+    charitiesToAdd: {
+      id: string;
+      name?: string;
+      logo?: string;
+      imageUrl?: string;
+      goalAmount: number;
+    }[]
   ) => {
     await Promise.all(
       charitiesToAdd.map((charity) =>
-        addUserCharity(charity.id, goalAmount, {
+        addUserCharity(charity.id, charity.goalAmount, {
           name: charity.name,
           logo: charity.logo,
           imageUrl: charity.imageUrl,

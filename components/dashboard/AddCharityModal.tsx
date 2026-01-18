@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useRef, useState, useTransition, useEffect } from "react";
 
 interface Charity {
   id: string;
@@ -15,8 +15,13 @@ interface AddCharityModalProps {
   onClose: () => void;
   existingCharityIds: string[];
   onAddCharities: (
-    charities: { id: string; name?: string; logo?: string; imageUrl?: string }[],
-    goalAmount: number
+    charities: {
+      id: string;
+      name?: string;
+      logo?: string;
+      imageUrl?: string;
+      goalAmount: number;
+    }[]
   ) => Promise<void>;
 }
 
@@ -26,14 +31,21 @@ export function AddCharityModal({
   existingCharityIds,
   onAddCharities,
 }: AddCharityModalProps) {
+  const [step, setStep] = useState<"select" | "goals">("select");
   const [selectedCharities, setSelectedCharities] = useState<Charity[]>([]);
-  const [goalAmount, setGoalAmount] = useState<string>("5.00");
+  const [goalAmounts, setGoalAmounts] = useState<Record<string, string>>({});
+  const [goalError, setGoalError] = useState<string | null>(null);
+  const goalInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [isPending, startTransition] = useTransition();
   const [charities, setCharities] = useState<Charity[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isOpen) return;
+    setStep("select");
+    setSelectedCharities([]);
+    setGoalAmounts({});
+    setGoalError(null);
 
     async function fetchCharities() {
       try {
@@ -62,30 +74,50 @@ export function AddCharityModal({
     setSelectedCharities((prev) => {
       const exists = prev.some((item) => item.id === charity.id);
       if (exists) {
+        setGoalAmounts((current) => {
+          const next = { ...current };
+          delete next[charity.id];
+          return next;
+        });
         return prev.filter((item) => item.id !== charity.id);
       }
       if (prev.length >= maxSelectable) {
         return prev;
       }
+      setGoalAmounts((current) => ({
+        ...current,
+        [charity.id]: current[charity.id] ?? "5.00",
+      }));
       return [...prev, charity];
     });
   };
 
   const handleAdd = () => {
     if (selectedCharities.length === 0) return;
+    const invalid = selectedCharities.find((charity) => {
+      const value = parseFloat(goalAmounts[charity.id] || "");
+      return Number.isNaN(value) || value <= 0;
+    });
+    if (invalid) {
+      setGoalError("Enter a valid donation goal for each charity.");
+      goalInputRefs.current[invalid.id]?.focus();
+      return;
+    }
 
     startTransition(async () => {
+      setGoalError(null);
       await onAddCharities(
         selectedCharities.map((charity) => ({
           id: charity.id,
           name: charity.name,
           logo: charity.logo,
           imageUrl: charity.imageUrl,
-        })),
-        parseFloat(goalAmount) || 5
+          goalAmount: parseFloat(goalAmounts[charity.id]),
+        }))
       );
       setSelectedCharities([]);
-      setGoalAmount("5.00");
+      setGoalAmounts({});
+      setStep("select");
       onClose();
     });
   };
@@ -100,7 +132,14 @@ export function AddCharityModal({
       />
       <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-lg font-semibold text-black">Add Charity</h2>
+          <div>
+            <h2 className="text-lg font-semibold text-black">
+              {step === "select" ? "Add Charity" : "Set Goals"}
+            </h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Step {step === "select" ? "1" : "2"} of 2
+            </p>
+          </div>
           <button
             onClick={onClose}
             className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
@@ -122,87 +161,124 @@ export function AddCharityModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
-          {loading ? (
-            <p className="text-center text-gray-500 py-8">Loading charities...</p>
-          ) : availableCharities.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">
-              You&apos;ve added all available charities!
-            </p>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-xs text-gray-500">
-                Select up to {maxSelectable} charities
+          {step === "select" ? (
+            loading ? (
+              <p className="text-center text-gray-500 py-8">Loading charities...</p>
+            ) : availableCharities.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">
+                You&apos;ve added all available charities!
               </p>
-              {availableCharities.map((charity) => (
-                <button
-                  key={charity.id}
-                  onClick={() => toggleCharity(charity)}
-                  className={`w-full p-4 rounded-xl border text-left transition-all ${
-                    selectedCharities.some((item) => item.id === charity.id)
-                      ? "border-emerald-500 bg-emerald-50"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-20 h-20 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0">
-                      {charity.imageUrl ? (
-                        <img
-                          src={charity.imageUrl}
-                          alt={charity.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-3xl">{charity.logo}</span>
-                      )}
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500">
+                  Select up to {maxSelectable} charities
+                </p>
+                {availableCharities.map((charity) => (
+                  <button
+                    key={charity.id}
+                    onClick={() => toggleCharity(charity)}
+                    className={`w-full p-4 rounded-xl border text-left transition-all ${
+                      selectedCharities.some((item) => item.id === charity.id)
+                        ? "border-emerald-500 bg-emerald-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-20 h-20 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0">
+                        {charity.imageUrl ? (
+                          <img
+                            src={charity.imageUrl}
+                            alt={charity.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-3xl">{charity.logo}</span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-black">{charity.name}</p>
+                        <p className="text-sm text-gray-500">
+                          {charity.description}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-black">{charity.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {charity.description}
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {selectedCharities.length > 0 && (
-            <div className="mt-6 pt-6 border-t">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Donation Goal
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                  $
-                </span>
-                <input
-                  type="number"
-                  value={goalAmount}
-                  onChange={(e) => setGoalAmount(e.target.value)}
-                  min="1"
-                  step="0.01"
-                  className="w-full pl-7 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-black"
-                />
+                  </button>
+                ))}
               </div>
+            )
+          ) : (
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-gray-700">
+                Donation Goals
+              </label>
+              {selectedCharities.map((charity) => (
+                <div key={charity.id} className="flex items-center gap-3">
+                  <div className="flex-1 text-sm text-gray-700">
+                    {charity.name}
+                  </div>
+                  <div className="relative w-32">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      value={goalAmounts[charity.id] || ""}
+                      onChange={(e) =>
+                        setGoalAmounts((current) => ({
+                          ...current,
+                          [charity.id]: e.target.value,
+                        }))
+                      }
+                      ref={(el) => {
+                        goalInputRefs.current[charity.id] = el;
+                      }}
+                      min="1"
+                      step="0.01"
+                      placeholder="10.00"
+                      className="w-full pl-7 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-black"
+                    />
+                  </div>
+                </div>
+              ))}
+              {goalError && (
+                <p className="text-sm text-red-500">{goalError}</p>
+              )}
             </div>
           )}
         </div>
 
         <div className="p-6 border-t bg-gray-50 rounded-b-2xl">
-          <button
-            onClick={handleAdd}
-            disabled={
-              selectedCharities.length === 0 ||
-              isPending ||
-              availableCharities.length === 0
-            }
-            className="w-full py-2.5 bg-black text-white rounded-lg font-medium transition-colors hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed"
-          >
-            {isPending
-              ? "Adding..."
-              : `Add ${selectedCharities.length || ""} Charit${selectedCharities.length === 1 ? "y" : "ies"}`}
-          </button>
+          {step === "select" ? (
+            <button
+              onClick={() => setStep("goals")}
+              disabled={
+                selectedCharities.length === 0 ||
+                isPending ||
+                availableCharities.length === 0
+              }
+              className="w-full py-2.5 bg-black text-white rounded-lg font-medium transition-colors hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              Next: Set goals
+            </button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setStep("select")}
+                className="flex-1 py-2.5 border border-gray-200 text-gray-700 rounded-lg font-medium transition-colors hover:bg-gray-100"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleAdd}
+                disabled={selectedCharities.length === 0 || isPending}
+                className="flex-1 py-2.5 bg-black text-white rounded-lg font-medium transition-colors hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                {isPending
+                  ? "Adding..."
+                  : `Add ${selectedCharities.length} Charit${selectedCharities.length === 1 ? "y" : "ies"}`}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
