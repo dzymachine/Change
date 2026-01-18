@@ -8,7 +8,7 @@ const authRoutes = ["/"];
 // Onboarding routes
 const onboardingRoutes = ["/onboarding"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request });
   type CookieOptions = Parameters<typeof response.cookies.set>[2];
   type CookieToSet = { name: string; value: string; options?: CookieOptions };
