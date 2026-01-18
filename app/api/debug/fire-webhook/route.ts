@@ -9,6 +9,8 @@ import { isDebugAuthorized } from "@/lib/debug-auth";
  * DEBUG ONLY - Fire a Plaid sandbox webhook
  * This triggers Plaid to send a webhook to your webhook URL
  * Useful for testing the webhook → sync → allocation flow
+ * 
+ * In production, requires DEBUG_API_TOKEN via x-debug-token header
  */
 export async function POST(request: NextRequest) {
   if (!isDebugAuthorized(request)) {
