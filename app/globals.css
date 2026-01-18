@@ -20,11 +20,13 @@
   --muted: #6b6b6b;
   --border: #e5e5e5;
   --border-strong: #d4d4d4;
+  --card: #ffffff;
   
   /* Semantic */
   --primary: var(--green);
   --primary-hover: var(--green-light);
-  --accent: var(--tan);
+  --accent: #f8f6f3;
+  --accent-foreground: var(--tan);
   --error: var(--red);
   --info: var(--cyan);
 }
