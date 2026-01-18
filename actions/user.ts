@@ -225,10 +225,10 @@ export async function checkOnboardingStatus(): Promise<boolean> {
 /**
  * Sign out the current user
  */
-export async function signOut() {
+export async function signOut(): Promise<ActionResult> {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/");
+  return { success: true };
 }
 
 /**

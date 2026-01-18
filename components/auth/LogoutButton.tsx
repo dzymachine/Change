@@ -3,12 +3,17 @@
 import { useTransition } from "react";
 import { signOut } from "@/actions/user";
 
+const LANDING_PAGE_URL = "https://empowered-onboarding-054129.framer.app/";
+
 export function LogoutButton() {
   const [isPending, startTransition] = useTransition();
 
   const handleSignOut = () => {
     startTransition(async () => {
-      await signOut();
+      const result = await signOut();
+      if (result.success) {
+        window.location.href = LANDING_PAGE_URL;
+      }
     });
   };
 
