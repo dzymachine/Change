@@ -176,16 +176,6 @@ export const HARDCODED_CHARITIES: Charity[] = [
     categories: ["Health"],
   },
   {
-    id: "malaria-consortium",
-    name: "Malaria Consortium",
-    description:
-      "Malaria Consortium exists to improve health and save lives in communities affected by malaria and related health inequities, delivering evidence-based programs and supporting stronger health systems.",
-    logo: "",
-    charityUrl: "https://www.malariaconsortium.org/",
-    imageUrl: "https://www.malariaconsortium.org/assets/global/Picture1_2025-11-28-115322_eenz.png",
-    categories: ["Health"],
-  },
-  {
     id: "clinton-health-access-initiative",
     name: "Clinton Health Access Initiative (CHAI)",
     description:
