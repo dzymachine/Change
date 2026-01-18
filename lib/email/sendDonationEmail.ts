@@ -1,3 +1,4 @@
+// Email notification service for donation receipts
 import nodemailer from "nodemailer";
 
 type DonationEmailParams = {
