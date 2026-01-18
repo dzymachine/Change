@@ -23,10 +23,10 @@ export function TransactionList({ showAll = false }: TransactionListProps) {
   useEffect(() => {
     async function fetchTransactions() {
       try {
-        const response = await fetch("/api/debug/simulate-transaction");
+        const response = await fetch("/api/transactions");
         if (response.ok) {
           const data = await response.json();
-          setTransactions(data.recent_transactions || []);
+          setTransactions(data.transactions || []);
         }
       } catch (error) {
         console.error("Failed to fetch transactions:", error);
