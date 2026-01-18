@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { quickLogin } from "@/actions/user";
@@ -141,13 +142,14 @@ export function AuthLanding() {
       {/* Header Section */}
       <header className="text-center mb-12">
         {/* Logo / Brand */}
-        <div className="mb-8">
-          <span 
-            className="font-body text-2xl tracking-wide"
-            style={{ color: "var(--green)", fontWeight: 600 }}
-          >
-            Change.
-          </span>
+        <div className="mb-8 flex justify-center">
+          <Image
+            src="/change-logo.png"
+            alt="Change"
+            width={140}
+            height={38}
+            priority
+          />
         </div>
         
         {/* Decorative line */}

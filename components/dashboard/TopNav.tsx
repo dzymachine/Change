@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 export function TopNav() {
@@ -25,10 +26,15 @@ export function TopNav() {
       <Link
         href="/dashboard"
         prefetch={false}
-        className="font-body text-2xl tracking-wide transition-colors duration-200"
-        style={{ color: "var(--green)", fontWeight: 600 }}
+        className="transition-opacity duration-200 hover:opacity-80"
       >
-        Change.
+        <Image
+          src="/change-logo.png"
+          alt="Change"
+          width={120}
+          height={32}
+          priority
+        />
       </Link>
 
       <div className="flex items-center gap-1">

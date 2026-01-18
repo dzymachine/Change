@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 
@@ -40,12 +41,13 @@ export default async function OnboardingLayout({
         style={{ borderBottom: "1px solid var(--border)" }}
       >
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <span 
-            className="font-body text-xl tracking-wide"
-            style={{ color: "var(--green)", fontWeight: 600 }}
-          >
-            Change.
-          </span>
+          <Image
+            src="/change-logo.png"
+            alt="Change"
+            width={100}
+            height={27}
+            priority
+          />
           <SignOutButton variant="compact" />
         </div>
       </header>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { SignOutButton } from "@/components/auth/SignOutButton";
@@ -21,8 +22,14 @@ export function DashboardNav({ user }: DashboardNavProps) {
   return (
     <nav className="w-64 border-r bg-gray-50 p-4 hidden lg:block relative">
       <div className="mb-8">
-        <Link href="/dashboard" className="text-2xl font-bold text-emerald-600">
-          Change.
+        <Link href="/dashboard" className="inline-block transition-opacity hover:opacity-80">
+          <Image
+            src="/change-logo.png"
+            alt="Change"
+            width={120}
+            height={32}
+            priority
+          />
         </Link>
       </div>
 
