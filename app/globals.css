@@ -1,33 +1,48 @@
 @import "tailwindcss";
 
 :root {
+  /* Brand Color Palette */
+  --tan: #a2896c;
+  --tan-light: #c4b49e;
+  --tan-dark: #7d6a52;
+  --green: #007a55;
+  --green-light: #00996b;
+  --green-dark: #005c40;
+  --white: #ffffff;
+  --red: #ac3422;
+  --red-light: #d4483a;
+  --cyan: #238593;
+  --cyan-light: #2fa3b3;
+  
+  /* Neutrals */
   --background: #ffffff;
-  --foreground: #171717;
-  --emerald-50: #ecfdf5;
-  --emerald-100: #d1fae5;
-  --emerald-500: #10b981;
-  --emerald-600: #059669;
-  --emerald-700: #047857;
+  --foreground: #1a1a1a;
+  --muted: #6b6b6b;
+  --border: #e5e5e5;
+  --border-strong: #d4d4d4;
+  
+  /* Semantic */
+  --primary: var(--green);
+  --primary-hover: var(--green-light);
+  --accent: var(--tan);
+  --error: var(--red);
+  --info: var(--cyan);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
+  --font-body: var(--font-body);
+  --font-display: var(--font-display);
   --font-mono: var(--font-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-body), "Times New Roman", Georgia, serif;
 }
 
 /* Smooth scrolling */
@@ -37,8 +52,21 @@ html {
 
 /* Focus styles */
 *:focus-visible {
-  outline: 2px solid var(--emerald-500);
+  outline: 2px solid var(--green);
   outline-offset: 2px;
+}
+
+/* Typography utilities */
+.font-display {
+  font-family: var(--font-display), "Playfair Display", Georgia, serif;
+}
+
+.font-body {
+  font-family: var(--font-body), "Roboto Serif", "Times New Roman", Georgia, serif;
+}
+
+.font-mono {
+  font-family: var(--font-mono), "Courier New", monospace;
 }
 
 /* Custom scrollbar */
@@ -67,10 +95,10 @@ html {
 
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.3), 0 8px 10px -6px rgba(16, 185, 129, 0.2);
+    box-shadow: 0 10px 25px -5px rgba(0, 122, 85, 0.25), 0 8px 10px -6px rgba(0, 122, 85, 0.15);
   }
   50% {
-    box-shadow: 0 15px 35px -5px rgba(16, 185, 129, 0.4), 0 12px 15px -6px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 15px 35px -5px rgba(0, 122, 85, 0.35), 0 12px 15px -6px rgba(0, 122, 85, 0.25);
   }
 }
 

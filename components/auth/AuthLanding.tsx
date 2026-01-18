@@ -57,34 +57,17 @@ export function AuthLanding() {
         return;
       }
 
-      // Refresh to trigger server-side middleware which checks onboarding status
-      // and redirects appropriately (to /dashboard or /onboarding/charities)
       router.refresh();
-      // Small delay to ensure cookies are set before navigation
       setTimeout(() => {
         router.push("/dashboard");
       }, 100);
       return;
     }
 
-    // ============================================================================
-    // EMAIL VERIFICATION TOGGLE
-    // ============================================================================
-    // To enable/disable email verification, go to Supabase Dashboard:
-    //   1. Authentication → Providers → Email
-    //   2. Toggle "Confirm email" on/off
-    //
-    // When ENABLED:  User receives confirmation email, session is null until confirmed
-    // When DISABLED: User is immediately signed in, session is returned
-    //
-    // This code handles both cases automatically.
-    // ============================================================================
-    
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        // Only used when email confirmation is enabled - redirects after confirming
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
@@ -95,8 +78,6 @@ export function AuthLanding() {
       return;
     }
 
-    // If email confirmation is DISABLED in Supabase, user is immediately signed in
-    // and we get a session back. Redirect them directly to the app.
     if (data.session) {
       router.refresh();
       setTimeout(() => {
@@ -105,92 +86,171 @@ export function AuthLanding() {
       return;
     }
 
-    // If email confirmation is ENABLED, no session is returned.
-    // Show the "check your email" message.
     setSuccess(true);
     setLoading(false);
   }
 
   if (success) {
     return (
-      <div className="w-full max-w-md space-y-6 text-center">
-        <div className="text-3xl font-bold text-emerald-600">Change</div>
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold">Check your email</h1>
-          <p className="text-gray-500">
-            We sent a confirmation link to <strong>{email}</strong>.
-          </p>
-        </div>
+      <div className="w-full max-w-md mx-auto text-center px-6">
+        {/* Decorative accent */}
+        <div 
+          className="w-12 h-1 mx-auto mb-8"
+          style={{ backgroundColor: "var(--tan)" }}
+        />
+        
+        <h1 
+          className="font-display text-3xl mb-4"
+          style={{ color: "var(--foreground)" }}
+        >
+          Check your inbox
+        </h1>
+        
+        <p 
+          className="font-body text-base mb-2 leading-relaxed"
+          style={{ color: "var(--muted)" }}
+        >
+          We&apos;ve sent a confirmation link to
+        </p>
+        <p 
+          className="font-body text-base mb-8"
+          style={{ color: "var(--foreground)", fontWeight: 500 }}
+        >
+          {email}
+        </p>
+        
         <button
           type="button"
           onClick={() => {
             setSuccess(false);
             setMode("login");
           }}
-          className="text-emerald-600 hover:underline"
+          className="font-body text-sm transition-colors duration-200"
+          style={{ color: "var(--green)" }}
+          onMouseEnter={(e) => e.currentTarget.style.color = "var(--green-light)"}
+          onMouseLeave={(e) => e.currentTarget.style.color = "var(--green)"}
         >
-          Back to sign in
+          Return to sign in
         </button>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-md space-y-8">
-      <div className="text-center space-y-2">
-        <div className="text-3xl font-bold text-emerald-600">Change</div>
-        <h1 className="text-2xl font-bold">
-          {mode === "login" ? "Welcome back" : "Create your account"}
+    <div className="w-full max-w-[420px] mx-auto px-6">
+      {/* Header Section */}
+      <header className="text-center mb-12">
+        {/* Logo / Brand */}
+        <div className="mb-8">
+          <span 
+            className="font-body text-2xl tracking-wide"
+            style={{ color: "var(--green)", fontWeight: 600 }}
+          >
+            Change.
+          </span>
+        </div>
+        
+        {/* Decorative line */}
+        <div 
+          className="w-16 h-px mx-auto mb-8"
+          style={{ backgroundColor: "var(--tan)" }}
+        />
+        
+        {/* Headline */}
+        <h1 
+          className="font-display text-3xl md:text-4xl mb-4 leading-tight"
+          style={{ color: "var(--foreground)", fontWeight: 400 }}
+        >
+          {mode === "login" ? "Welcome back" : "Join us"}
         </h1>
-        <p className="text-gray-500">
+        
+        <p 
+          className="font-body text-base leading-relaxed"
+          style={{ color: "var(--muted)" }}
+        >
           {mode === "login"
-            ? "Sign in to keep making change."
-            : "Start making change with every purchase."}
+            ? "Sign in to continue making an impact."
+            : "Start turning spare change into real change."}
         </p>
-      </div>
+      </header>
 
-      <div className="flex items-center justify-center gap-2">
+      {/* Mode Toggle */}
+      <div className="flex justify-center gap-8 mb-10">
         <button
           type="button"
           onClick={() => setMode("login")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-            mode === "login"
-              ? "bg-emerald-600 text-white border-emerald-600"
-              : "border-gray-200 text-gray-600 hover:border-gray-300"
-          }`}
+          className="relative font-body text-sm pb-2 transition-colors duration-200"
+          style={{ 
+            color: mode === "login" ? "var(--foreground)" : "var(--muted)",
+            fontWeight: mode === "login" ? 500 : 400,
+          }}
         >
           Sign in
+          {mode === "login" && (
+            <span 
+              className="absolute bottom-0 left-0 right-0 h-0.5"
+              style={{ backgroundColor: "var(--green)" }}
+            />
+          )}
         </button>
         <button
           type="button"
           onClick={() => setMode("signup")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-            mode === "signup"
-              ? "bg-emerald-600 text-white border-emerald-600"
-              : "border-gray-200 text-gray-600 hover:border-gray-300"
-          }`}
+          className="relative font-body text-sm pb-2 transition-colors duration-200"
+          style={{ 
+            color: mode === "signup" ? "var(--foreground)" : "var(--muted)",
+            fontWeight: mode === "signup" ? 500 : 400,
+          }}
         >
           Create account
+          {mode === "signup" && (
+            <span 
+              className="absolute bottom-0 left-0 right-0 h-0.5"
+              style={{ backgroundColor: "var(--green)" }}
+            />
+          )}
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium mb-1">
-            Email
+          <label 
+            htmlFor="email" 
+            className="block font-body text-sm mb-2"
+            style={{ color: "var(--muted)" }}
+          >
+            Email address
           </label>
           <input
             id="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="w-full px-4 py-3 font-body text-base rounded-none transition-all duration-200"
+            style={{
+              backgroundColor: "var(--white)",
+              border: "1px solid var(--border)",
+              color: "var(--foreground)",
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "var(--green)";
+              e.currentTarget.style.outline = "none";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "var(--border)";
+            }}
             required
+            placeholder="you@example.com"
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium mb-1">
+          <label 
+            htmlFor="password" 
+            className="block font-body text-sm mb-2"
+            style={{ color: "var(--muted)" }}
+          >
             Password
           </label>
           <input
@@ -198,7 +258,19 @@ export function AuthLanding() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="w-full px-4 py-3 font-body text-base rounded-none transition-all duration-200"
+            style={{
+              backgroundColor: "var(--white)",
+              border: "1px solid var(--border)",
+              color: "var(--foreground)",
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "var(--green)";
+              e.currentTarget.style.outline = "none";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "var(--border)";
+            }}
             required
           />
         </div>
@@ -207,29 +279,62 @@ export function AuthLanding() {
           <div>
             <label
               htmlFor="confirmPassword"
-              className="block text-sm font-medium mb-1"
+              className="block font-body text-sm mb-2"
+              style={{ color: "var(--muted)" }}
             >
-              Confirm Password
+              Confirm password
             </label>
             <input
               id="confirmPassword"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="w-full px-4 py-3 font-body text-base rounded-none transition-all duration-200"
+              style={{
+                backgroundColor: "var(--white)",
+                border: "1px solid var(--border)",
+                color: "var(--foreground)",
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = "var(--green)";
+                e.currentTarget.style.outline = "none";
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = "var(--border)";
+              }}
               required
             />
           </div>
         )}
 
+        {/* Error Message */}
         {error && (
-          <p className="text-red-500 text-sm">{error}</p>
+          <p 
+            className="font-body text-sm"
+            style={{ color: "var(--red)" }}
+          >
+            {error}
+          </p>
         )}
 
+        {/* Submit Button */}
         <button
           type="submit"
           disabled={loading || isPending}
-          className="w-full py-2 px-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+          className="w-full py-3.5 font-body text-sm tracking-wide transition-all duration-200 disabled:opacity-50"
+          style={{
+            backgroundColor: "var(--green)",
+            color: "var(--white)",
+            fontWeight: 500,
+          }}
+          onMouseEnter={(e) => {
+            if (!loading && !isPending) {
+              e.currentTarget.style.backgroundColor = "var(--green-light)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "var(--green)";
+          }}
         >
           {loading
             ? mode === "login"
@@ -241,28 +346,72 @@ export function AuthLanding() {
         </button>
       </form>
 
+      {/* Footer accent */}
+      <div className="mt-16 flex justify-center">
+        <div 
+          className="w-8 h-8 rounded-full opacity-20"
+          style={{ backgroundColor: "var(--tan)" }}
+        />
+      </div>
+
       {/* Quick Login for Development */}
       {process.env.NODE_ENV === "development" && (
-        <div className="pt-6 border-t border-dashed border-gray-300">
-          <p className="text-xs text-gray-400 text-center mb-3">
-            Development Quick Login
+        <div 
+          className="mt-12 pt-8"
+          style={{ borderTop: "1px dashed var(--border)" }}
+        >
+          <p 
+            className="font-mono text-xs text-center mb-4 uppercase tracking-wider"
+            style={{ color: "var(--muted)", opacity: 0.6 }}
+          >
+            Dev Quick Login
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
               type="button"
               onClick={() => handleQuickLogin("onboarding")}
               disabled={isPending || loading}
-              className="flex-1 py-2 px-3 text-sm bg-amber-100 text-amber-700 border border-amber-300 rounded-lg hover:bg-amber-200 disabled:opacity-50 transition-colors"
+              className="flex-1 py-2.5 font-mono text-xs transition-all duration-200 disabled:opacity-50"
+              style={{
+                backgroundColor: "transparent",
+                border: "1px solid var(--tan)",
+                color: "var(--tan-dark)",
+              }}
+              onMouseEnter={(e) => {
+                if (!isPending && !loading) {
+                  e.currentTarget.style.backgroundColor = "var(--tan)";
+                  e.currentTarget.style.color = "var(--white)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.color = "var(--tan-dark)";
+              }}
             >
-              {isPending ? "..." : "Test: Onboarding"}
+              {isPending ? "..." : "Onboarding"}
             </button>
             <button
               type="button"
               onClick={() => handleQuickLogin("dashboard")}
               disabled={isPending || loading}
-              className="flex-1 py-2 px-3 text-sm bg-blue-100 text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-200 disabled:opacity-50 transition-colors"
+              className="flex-1 py-2.5 font-mono text-xs transition-all duration-200 disabled:opacity-50"
+              style={{
+                backgroundColor: "transparent",
+                border: "1px solid var(--cyan)",
+                color: "var(--cyan)",
+              }}
+              onMouseEnter={(e) => {
+                if (!isPending && !loading) {
+                  e.currentTarget.style.backgroundColor = "var(--cyan)";
+                  e.currentTarget.style.color = "var(--white)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.color = "var(--cyan)";
+              }}
             >
-              {isPending ? "..." : "Test: Dashboard"}
+              {isPending ? "..." : "Dashboard"}
             </button>
           </div>
         </div>
