@@ -80,13 +80,35 @@ export async function GET() {
         ? ([projectsNode] as GlobalGivingProject[])
         : [];
 
+    const pickHighRes = (urls: string[]): string | undefined => {
+      if (urls.length === 0) return undefined;
+      const preferred = urls.find((url) =>
+        /pict_original|original|large|1024|1200|1600/i.test(url)
+      );
+      return preferred ?? urls[urls.length - 1];
+    };
+
     const pickImageUrl = (value: unknown): string | undefined => {
       if (typeof value === "string") {
         return value;
       }
       if (Array.isArray(value)) {
-        const first = value.find((item) => typeof item === "string");
-        return typeof first === "string" ? first : undefined;
+        const candidates = value
+          .map((item) => {
+            if (typeof item === "string") return item;
+            if (item && typeof item === "object") {
+              const record = item as Record<string, unknown>;
+              const keys = ["url", "href", "link", "#text", "_"];
+              for (const key of keys) {
+                if (typeof record[key] === "string") {
+                  return record[key] as string;
+                }
+              }
+            }
+            return undefined;
+          })
+          .filter((item): item is string => Boolean(item));
+        return pickHighRes(candidates);
       }
       if (value && typeof value === "object") {
         const candidate = value as Record<string, unknown>;

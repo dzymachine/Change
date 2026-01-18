@@ -43,11 +43,22 @@ export async function GET() {
           const charities = projects.map((project) => {
             // Extract image URL from various possible locations
             let imageUrl: string | undefined;
+            const pickHighRes = (urls: string[]): string | undefined => {
+              if (urls.length === 0) return undefined;
+              const preferred = urls.find((url) =>
+                /pict_original|original|large|1024|1200|1600/i.test(url)
+              );
+              return preferred ?? urls[urls.length - 1];
+            };
+
             if (typeof project.imageLink === "string") {
               imageUrl = project.imageLink;
             } else if (project.image?.imagelink) {
               if (Array.isArray(project.image.imagelink)) {
-                imageUrl = project.image.imagelink[0]?.url;
+                const candidates = project.image.imagelink
+                  .map((item) => item?.url)
+                  .filter((item): item is string => Boolean(item));
+                imageUrl = pickHighRes(candidates);
               } else if (typeof project.image.imagelink === "string") {
                 imageUrl = project.image.imagelink;
               }

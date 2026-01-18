@@ -125,7 +125,7 @@ export function CharityCard({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M12 6h.01M12 12h.01M12 18h.01"
+                  d="M6 12h.01M12 12h.01M18 12h.01"
                 />
               </svg>
             </button>
