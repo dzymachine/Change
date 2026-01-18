@@ -6,7 +6,7 @@ interface CharityCardProps {
   id: string;
   name: string;
   logo?: string;
-  location?: string;
+  category?: string | null;
   imageUrl?: string | null;
   charityUrl?: string;
   goalAmount: number;
@@ -30,7 +30,7 @@ export function CharityCard({
   logo,
   imageUrl,
   charityUrl,
-  location = "Santa Cruz",
+  category,
   goalAmount,
   currentAmount,
   isCompleted,
@@ -204,19 +204,22 @@ export function CharityCard({
           )}
         </div>
 
-        {/* Name and location */}
+        {/* Name and category */}
         <h3 
           className="font-body text-sm truncate"
           style={{ color: "var(--foreground)", fontWeight: 500 }}
         >
           {name}
         </h3>
-        <p 
-          className="font-body text-xs mb-3"
-          style={{ color: "var(--muted)" }}
-        >
-          {location}
-        </p>
+        {category && (
+          <p 
+            className="font-body text-xs mb-3"
+            style={{ color: "var(--muted)" }}
+          >
+            {category}
+          </p>
+        )}
+        {!category && <div className="mb-3" />}
 
         {isEditingGoal ? (
           <div className="mt-auto space-y-2">
@@ -358,16 +361,18 @@ export function CharityCard({
               >
                 {name}
               </h3>
-              <span 
-                className="font-mono text-xs px-2 py-0.5"
-                style={{ 
-                  backgroundColor: "rgba(162, 137, 108, 0.1)",
-                  color: "var(--muted)",
-                  borderRadius: "4px",
-                }}
-              >
-                {location}
-              </span>
+              {category && (
+                <span 
+                  className="font-mono text-xs px-2 py-0.5"
+                  style={{ 
+                    backgroundColor: "rgba(162, 137, 108, 0.1)",
+                    color: "var(--muted)",
+                    borderRadius: "4px",
+                  }}
+                >
+                  {category}
+                </span>
+              )}
             </div>
             <p 
               className="font-body text-sm"

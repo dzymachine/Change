@@ -18,6 +18,7 @@ export async function addUserCharity(
     name?: string;
     logo?: string;
     imageUrl?: string;
+    category?: string;
   }
 ): Promise<ActionResult> {
   const supabase = await createClient();
@@ -56,6 +57,7 @@ export async function addUserCharity(
     charity_name: charityInfo?.name || "Unknown Charity",
     charity_logo: charityInfo?.logo || "🎯",
     charity_image_url: charityInfo?.imageUrl || null,
+    charity_category: charityInfo?.category || null,
     goal_amount: goalAmount,
     current_amount: 0,
     priority: nextPriority,

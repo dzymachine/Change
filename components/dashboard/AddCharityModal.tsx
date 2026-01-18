@@ -8,6 +8,7 @@ interface Charity {
   description: string;
   logo: string;
   imageUrl?: string;
+  categories?: string[];
 }
 
 interface AddCharityModalProps {
@@ -20,6 +21,7 @@ interface AddCharityModalProps {
       name?: string;
       logo?: string;
       imageUrl?: string;
+      category?: string;
       goalAmount: number;
     }[]
   ) => Promise<void>;
@@ -126,6 +128,7 @@ export function AddCharityModal({
           name: charity.name,
           logo: charity.logo,
           imageUrl: charity.imageUrl,
+          category: charity.categories?.[0],
           goalAmount: parseFloat(goalAmounts[charity.id]),
         }))
       );

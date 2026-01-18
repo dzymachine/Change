@@ -1,10 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { LinkBankButton } from "@/components/plaid/LinkBankButton";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { RoundupToggle } from "@/components/settings/RoundupToggle";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  // Fetch user's profile to get roundup_enabled setting
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("roundup_enabled")
+    .eq("id", user?.id)
+    .single();
+
+  const roundupEnabled = profile?.roundup_enabled ?? true;
 
   // TODO: Fetch linked accounts from database
   const linkedAccounts: { id: string; institutionName: string; isActive: boolean }[] = [];
@@ -62,23 +72,13 @@ export default async function SettingsPage() {
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-black">Round-up Settings</h2>
         <div className="bg-white border rounded-xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-black">Enable round-ups</p>
-              <p className="text-sm text-gray-500">Automatically round up transactions</p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" defaultChecked className="sr-only peer" />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-            </label>
-          </div>
+          <RoundupToggle initialEnabled={roundupEnabled} />
         </div>
       </section>
 
-      {/* Danger Zone */}
+      {/* Sign Out */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-red-600">Danger Zone</h2>
-        <div className="bg-white border border-red-200 rounded-xl p-5 space-y-4">
+        <div className="bg-white border rounded-xl p-5">
           <LogoutButton />
         </div>
       </section>

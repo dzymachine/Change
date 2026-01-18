@@ -172,6 +172,18 @@ export async function syncTransactionsForItem(
  * Allocates round-ups to charities based on user's donation mode
  */
 async function processNewDonations(userId: string): Promise<void> {
+  // Check if round-ups are enabled for this user
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("roundup_enabled")
+    .eq("id", userId)
+    .single();
+
+  if (!profile?.roundup_enabled) {
+    console.log("Round-ups disabled for user, skipping donation processing");
+    return;
+  }
+
   // Get unprocessed, settled transactions
   const { data: transactions, error } = await supabaseAdmin
     .from("transactions")

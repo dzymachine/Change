@@ -16,6 +16,7 @@ interface CharityGoal {
   name: string;
   logo: string;
   imageUrl?: string | null;
+  category?: string | null;
   goalAmount: number;
   currentAmount: number;
   priority: number;
@@ -30,13 +31,23 @@ interface CharitiesSectionProps {
 
 interface SimulateResult {
   success: boolean;
-  transaction: {
+  roundupEnabled?: boolean;
+  message?: string;
+  transaction?: {
     merchant: string;
     amount: number;
     roundup: number;
   };
-  donation: {
+  donation?: {
+    allocated?: boolean;
     charity_name: string | null;
+    amount?: number;
+  };
+  explanation?: {
+    status?: string;
+    purchase?: string;
+    roundup?: string;
+    impact?: string;
   };
 }
 
@@ -131,6 +142,7 @@ export function CharitiesSection({
       name?: string;
       logo?: string;
       imageUrl?: string;
+      category?: string;
       goalAmount: number;
     }[]
   ) => {
@@ -140,6 +152,7 @@ export function CharitiesSection({
           name: charity.name,
           logo: charity.logo,
           imageUrl: charity.imageUrl,
+          category: charity.category,
         })
       )
     );
@@ -204,13 +217,18 @@ export function CharitiesSection({
 
       setSimulateResult(data);
 
-      // Refresh page and close modal after 2 seconds
+      // Only refresh if round-ups are enabled and donation was allocated
+      // This updates the charity progress and transaction history
+      const shouldRefresh = data.success && data.roundupEnabled && data.donation?.allocated;
+      
       setTimeout(() => {
-        router.refresh();
+        if (shouldRefresh) {
+          router.refresh();
+        }
         setShowSimulateModal(false);
         setIsSimulating(false);
         setSimulateResult(null);
-      }, 2000);
+      }, 2500);
 
     } catch (err) {
       setSimulateError(err instanceof Error ? err.message : "Something went wrong");
@@ -379,6 +397,7 @@ export function CharitiesSection({
             logo={charity.logo}
             imageUrl={charity.imageUrl}
             charityUrl={urlMap[charity.charityId]}
+            category={charity.category}
             goalAmount={charity.goalAmount}
             currentAmount={charity.currentAmount}
             priority={charity.priority}
@@ -564,8 +583,8 @@ export function CharitiesSection({
                 </div>
               )}
 
-              {/* Success result */}
-              {simulateResult && (
+              {/* Success result - donation was made */}
+              {simulateResult && simulateResult.success && simulateResult.roundupEnabled && simulateResult.transaction && (
                 <div 
                   className="p-3 font-body text-sm space-y-1"
                   style={{ backgroundColor: "rgba(0, 122, 85, 0.08)" }}
@@ -578,7 +597,28 @@ export function CharitiesSection({
                   </div>
                   <div style={{ color: "var(--green)" }}>
                     +${simulateResult.transaction.roundup.toFixed(2)} donated
-                    {simulateResult.donation.charity_name && ` to ${simulateResult.donation.charity_name}`}
+                    {simulateResult.donation?.charity_name && ` to ${simulateResult.donation.charity_name}`}
+                  </div>
+                </div>
+              )}
+
+              {/* Transaction recorded but round-ups disabled */}
+              {simulateResult && simulateResult.success && !simulateResult.roundupEnabled && simulateResult.transaction && (
+                <div 
+                  className="p-3 font-body text-sm space-y-1"
+                  style={{ backgroundColor: "rgba(162, 137, 108, 0.08)" }}
+                >
+                  <div style={{ color: "var(--tan)", fontWeight: 500 }}>
+                    Transaction Recorded
+                  </div>
+                  <div style={{ color: "var(--foreground)" }}>
+                    {simulateResult.transaction.merchant} — ${simulateResult.transaction.amount.toFixed(2)}
+                  </div>
+                  <div style={{ color: "var(--muted)" }}>
+                    Round-ups paused — no donation made
+                  </div>
+                  <div style={{ color: "var(--muted)", fontSize: "12px" }}>
+                    Enable round-ups in Settings to resume donations
                   </div>
                 </div>
               )}

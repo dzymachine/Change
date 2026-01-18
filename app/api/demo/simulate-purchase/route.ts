@@ -60,6 +60,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if round-ups are enabled for this user
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("roundup_enabled")
+      .eq("id", user.id)
+      .single();
+
+    const roundupEnabled = profile?.roundup_enabled ?? true;
+
     // Parse optional custom amount/merchant from request
     const body = await request.json().catch(() => ({}));
     const customAmount = body.amount;
@@ -139,18 +148,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Allocate the round-up to charity
-    const allocation = await allocateRoundupToCharity(user.id, transaction.id, roundup);
-
-    // Get the charity name if allocated
+    // Only allocate the round-up if round-ups are enabled
+    let allocation = { success: false, charityId: undefined as string | undefined };
     let charityName = null;
-    if (allocation.success && allocation.charityId) {
-      const { data: charity } = await supabaseAdmin
-        .from("charities")
-        .select("name")
-        .eq("id", allocation.charityId)
-        .single();
-      charityName = charity?.name;
+
+    if (roundupEnabled) {
+      allocation = await allocateRoundupToCharity(user.id, transaction.id, roundup);
+
+      // Get the charity name if allocated
+      if (allocation.success && allocation.charityId) {
+        const { data: charity } = await supabaseAdmin
+          .from("charities")
+          .select("name")
+          .eq("id", allocation.charityId)
+          .single();
+        charityName = charity?.name;
+      }
+    } else {
+      // Mark transaction as processed but without donation when round-ups disabled
+      await supabaseAdmin
+        .from("transactions")
+        .update({ processed_for_donation: true, donated_to_charity_id: null })
+        .eq("id", transaction.id);
     }
 
     logJson("info", "demo.purchase.completed", {
@@ -158,12 +177,43 @@ export async function POST(request: NextRequest) {
       transaction_id: transaction.id,
       amount,
       roundup,
+      roundup_enabled: roundupEnabled,
       charity_id: allocation.charityId,
     });
+
+    // Return different response based on whether round-ups are enabled
+    if (!roundupEnabled) {
+      return NextResponse.json({
+        success: true,
+        demo: true,
+        roundupEnabled: false,
+        message: "Transaction recorded (round-ups paused)",
+        transaction: {
+          id: transaction.id,
+          merchant: merchant.name,
+          category: merchant.category[0],
+          amount: amount,
+          roundup: roundup,
+          date: todayDate(),
+        },
+        donation: {
+          allocated: false,
+          charity_id: null,
+          charity_name: null,
+          amount: 0,
+        },
+        explanation: {
+          purchase: `Transaction at ${merchant.name} for $${amount.toFixed(2)} recorded`,
+          roundup: "Round-ups are paused - no donation was made",
+          impact: "Enable round-ups in Settings to start donating again",
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,
       demo: true,
+      roundupEnabled: true,
       message: "Purchase simulated successfully!",
       transaction: {
         id: transaction.id,
