@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { plaidClient } from "@/lib/plaid/client";
+import { syncTransactionsForItem } from "@/lib/plaid/sync";
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,10 +49,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Note: Initial transaction sync will be triggered by Plaid webhook
-    // Or you can manually call syncTransactionsForItem(item_id) here
+    // IMPORTANT: Prime the sync immediately after linking
+    // This triggers Plaid to start sending SYNC_UPDATES_AVAILABLE webhooks
+    // The sync also saves the initial cursor for future incremental syncs
+    console.log(`Priming initial sync for item: ${item_id}`);
+    
+    // Run sync in background (don't block the response)
+    // The sync will save the cursor and any initial transactions
+    syncTransactionsForItem(item_id).catch((err) => {
+      console.error("Initial sync failed:", err);
+    });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, item_id });
 
   } catch (error) {
     console.error("Error exchanging token:", error);

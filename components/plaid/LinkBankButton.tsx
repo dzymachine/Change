@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePlaidLink } from "@/hooks/use-plaid-link";
 import { exchangePlaidToken } from "@/actions/plaid";
 
@@ -16,8 +16,9 @@ export function LinkBankButton({
   onSuccess 
 }: LinkBankButtonProps) {
   const [isLinking, setIsLinking] = useState(false);
+  const [shouldOpen, setShouldOpen] = useState(false);
 
-  const { open, loading, fetchLinkToken } = usePlaidLink({
+  const { open, ready, loading } = usePlaidLink({
     onSuccess: async (publicToken, metadata) => {
       setIsLinking(true);
       
@@ -36,15 +37,29 @@ export function LinkBankButton({
     },
     onExit: () => {
       setIsLinking(false);
+      setShouldOpen(false);
     },
   });
 
-  const handleClick = async () => {
-    await fetchLinkToken();
-    open();
+  // Open Plaid Link when ready and user clicked the button
+  useEffect(() => {
+    if (shouldOpen && ready) {
+      open();
+      setShouldOpen(false);
+    }
+  }, [shouldOpen, ready, open]);
+
+  const handleClick = () => {
+    if (ready) {
+      // Already ready, open immediately
+      open();
+    } else {
+      // Not ready yet, set flag to open when ready
+      setShouldOpen(true);
+    }
   };
 
-  const isLoading = loading || isLinking;
+  const isLoading = loading || isLinking || (shouldOpen && !ready);
 
   const baseStyles = "font-medium rounded-lg transition-colors disabled:opacity-50";
   

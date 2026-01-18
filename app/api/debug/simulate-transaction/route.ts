@@ -14,30 +14,51 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const amount = body.amount || Math.random() * 50 + 5; // Random $5-$55 if not specified
     const merchantName = body.merchant || getRandomMerchant();
+
+    // Try to get user from session, or use provided user_id, or find first user with charities
+    let userId = body.user_id;
+    
+    if (!userId) {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id;
+    }
+    
+    // If still no user, find the first user with active charities
+    if (!userId) {
+      const { data: firstUserCharity } = await supabaseAdmin
+        .from("user_charities")
+        .select("user_id")
+        .eq("is_completed", false)
+        .limit(1)
+        .single();
+      
+      userId = firstUserCharity?.user_id;
+    }
+    
+    if (!userId) {
+      return NextResponse.json(
+        { error: "No user with active charities found" },
+        { status: 404 }
+      );
+    }
+    
+    console.log(`[simulate-transaction] Using user: ${userId}`);
 
     const roundupAmount = calculateRoundup(amount);
 
     // Check if user has a linked account (create mock one if not)
-    const mockItemId = `mock_item_${user.id}`;
+    const mockItemId = `mock_item_${userId}`;
 
     // Use maybeSingle() to avoid errors when user has multiple linked accounts
     let { data: linkedAccount } = await supabaseAdmin
       .from("linked_accounts")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -47,7 +68,7 @@ export async function POST(request: NextRequest) {
       const { data: newAccount, error: createError } = await supabaseAdmin
         .from("linked_accounts")
         .upsert({
-          user_id: user.id,
+          user_id: userId,
           plaid_item_id: mockItemId,
           plaid_access_token: "mock_access_token",
           institution_name: "Mock Bank (Sandbox)",
@@ -75,7 +96,7 @@ export async function POST(request: NextRequest) {
     const { data: transaction, error: txError } = await supabaseAdmin
       .from("transactions")
       .insert({
-        user_id: user.id,
+        user_id: userId,
         linked_account_id: linkedAccount.id,
         plaid_transaction_id: transactionId,
         amount: amount,
@@ -99,7 +120,7 @@ export async function POST(request: NextRequest) {
 
     // Allocate the round-up to a charity
     const allocation = await allocateRoundupToCharity(
-      user.id,
+      userId,
       transaction.id,
       roundupAmount
     );
@@ -108,7 +129,7 @@ export async function POST(request: NextRequest) {
     const { data: userCharities } = await supabaseAdmin
       .from("user_charities")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .order("priority", { ascending: true });
 
     return NextResponse.json({
@@ -168,20 +189,33 @@ export async function GET() {
     );
   }
 
+  // Try to get user from session, or find first user with charities
+  let userId: string | undefined;
+  
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+  userId = user?.id;
+  
+  // If no authenticated user, find first user with charities
+  if (!userId) {
+    const { data: firstUserCharity } = await supabaseAdmin
+      .from("user_charities")
+      .select("user_id")
+      .limit(1)
+      .single();
+    
+    userId = firstUserCharity?.user_id;
+  }
 
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (!userId) {
+    return NextResponse.json({ error: "No users with charities found" }, { status: 404 });
   }
 
   // Get recent transactions
   const { data: transactions } = await supabaseAdmin
     .from("transactions")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(10);
 
@@ -189,20 +223,22 @@ export async function GET() {
   const { data: charities } = await supabaseAdmin
     .from("user_charities")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("priority", { ascending: true });
 
   // Get profile
   const { data: profile } = await supabaseAdmin
     .from("profiles")
     .select("donation_mode, roundup_enabled")
-    .eq("id", user.id)
+    .eq("id", userId)
     .single();
 
   return NextResponse.json({
+    user_id: userId,
     profile,
     charities: charities?.map((c) => ({
       charity_id: c.charity_id,
+      charity_name: c.charity_name,
       priority: c.priority,
       goal: parseFloat(c.goal_amount).toFixed(2),
       current: parseFloat(c.current_amount).toFixed(2),

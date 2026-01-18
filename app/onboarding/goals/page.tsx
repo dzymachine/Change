@@ -39,71 +39,85 @@ export default function OnboardingGoalsPage() {
     const cleanup = () => {
       isMounted = false;
     };
-    const stored = sessionStorage.getItem("onboarding_charities");
-    if (!stored) {
-      router.push("/onboarding/charities");
-      return cleanup;
-    }
+    
+    // Small delay to ensure sessionStorage is ready after navigation
+    const timer = setTimeout(() => {
+      if (!isMounted) return;
+      
+      const stored = sessionStorage.getItem("onboarding_charities");
+      console.log("[Goals] sessionStorage check:", stored ? "found" : "empty");
+      
+      if (!stored) {
+        console.log("[Goals] No charities in sessionStorage, redirecting to charities page");
+        router.replace("/onboarding/charities");
+        return;
+      }
 
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(stored);
-    } catch {
-      router.push("/onboarding/charities");
-      return cleanup;
-    }
-
-    const isCharity = (value: unknown): value is Charity =>
-      Boolean(
-        value &&
-          typeof value === "object" &&
-          "id" in value &&
-          "name" in value
-      );
-
-    const loadFromIds = async (ids: string[]) => {
+      let parsed: unknown;
       try {
-        // Fetch charities from our Supabase endpoint
-        const response = await fetch("/api/charities");
-        if (response.ok) {
-          const data = await response.json();
-          const fromApi = Array.isArray(data.charities)
-            ? (data.charities as Charity[]).filter((c) => ids.includes(c.id))
-            : [];
-          if (isMounted && fromApi.length > 0) {
-            setSelectedCharities(fromApi);
-            return;
+        parsed = JSON.parse(stored);
+      } catch (e) {
+        console.log("[Goals] Failed to parse sessionStorage:", e);
+        router.replace("/onboarding/charities");
+        return;
+      }
+
+      const isCharity = (value: unknown): value is Charity =>
+        Boolean(
+          value &&
+            typeof value === "object" &&
+            "id" in value &&
+            "name" in value
+        );
+
+      const loadFromIds = async (ids: string[]) => {
+        try {
+          // Fetch charities from our Supabase endpoint
+          const response = await fetch("/api/charities");
+          if (response.ok) {
+            const data = await response.json();
+            const fromApi = Array.isArray(data.charities)
+              ? (data.charities as Charity[]).filter((c) => ids.includes(c.id))
+              : [];
+            if (isMounted && fromApi.length > 0) {
+              setSelectedCharities(fromApi);
+              return;
+            }
           }
+        } catch {
+          // If API fails, redirect back to charity selection
         }
-      } catch {
-        // If API fails, redirect back to charity selection
+
+        if (isMounted) {
+          router.replace("/onboarding/charities");
+        }
+      };
+
+      if (
+        Array.isArray(parsed) &&
+        parsed.every((item) => typeof item === "string")
+      ) {
+        loadFromIds(parsed);
+        return;
       }
 
-      if (isMounted) {
-        router.push("/onboarding/charities");
+      if (Array.isArray(parsed)) {
+        const charities = parsed.filter(isCharity);
+        if (charities.length === 0) {
+          router.replace("/onboarding/charities");
+          return;
+        }
+        setSelectedCharities(charities);
+        return;
       }
+
+      router.replace("/onboarding/charities");
+    }, 50); // Small delay to ensure client hydration is complete
+    
+    return () => {
+      cleanup();
+      clearTimeout(timer);
     };
-
-    if (
-      Array.isArray(parsed) &&
-      parsed.every((item) => typeof item === "string")
-    ) {
-      loadFromIds(parsed);
-      return cleanup;
-    }
-
-    if (Array.isArray(parsed)) {
-      const charities = parsed.filter(isCharity);
-      if (charities.length === 0) {
-        router.push("/onboarding/charities");
-        return cleanup;
-      }
-      setSelectedCharities(charities);
-      return cleanup;
-    }
-
-    router.push("/onboarding/charities");
-    return cleanup;
   }, [router]);
 
   // Focus input when charity changes
@@ -153,17 +167,27 @@ export default function OnboardingGoalsPage() {
       } else {
         // Single charity: save to database and go to plaid
         setIsSaving(true);
-        const result = await saveCharityGoals(newGoals);
-        setIsSaving(false);
+        try {
+          console.log("[Goals] Saving single charity goal...");
+          const result = await saveCharityGoals(newGoals);
+          console.log("[Goals] Save result:", result);
+          setIsSaving(false);
 
-        if (!result.success) {
-          setError(result.error || "Failed to save goals");
-          return;
+          if (!result.success) {
+            setError(result.error || "Failed to save goals");
+            return;
+          }
+
+          // Clear sessionStorage and move to next step
+          sessionStorage.removeItem("onboarding_charities");
+          console.log("[Goals] Navigating to plaid page...");
+          // Use full page navigation to ensure cookies from server action are properly handled
+          window.location.href = "/onboarding/plaid";
+        } catch (err) {
+          console.error("[Goals] Error saving goals:", err);
+          setIsSaving(false);
+          setError("An unexpected error occurred. Please try again.");
         }
-
-        // Clear sessionStorage and move to next step
-        sessionStorage.removeItem("onboarding_charities");
-        router.push("/onboarding/plaid");
       }
     } else {
       // Animate to next charity

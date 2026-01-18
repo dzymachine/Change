@@ -5,6 +5,9 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { plaidClient } from "@/lib/plaid/client";
+import { syncTransactionsForItem } from "@/lib/plaid/sync";
 import { revalidatePath } from "next/cache";
 
 interface ExchangeTokenResult {
@@ -30,35 +33,47 @@ export async function exchangePlaidToken(
   }
 
   try {
-    // Call our API route to handle the exchange
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/plaid/exchange-token`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          public_token: publicToken,
-          metadata: {
-            institution: {
-              name: metadata.institutionName,
-              institution_id: metadata.institutionId,
-            },
-          },
-        }),
-      }
-    );
+    console.log("[exchangePlaidToken] Starting exchange for user:", user.id);
+    
+    // Exchange public token for access token directly with Plaid
+    const exchangeResponse = await plaidClient.itemPublicTokenExchange({
+      public_token: publicToken,
+    });
 
-    if (!response.ok) {
-      const error = await response.json();
-      return { success: false, error: error.message || "Failed to link account" };
+    const { access_token, item_id } = exchangeResponse.data;
+    console.log("[exchangePlaidToken] Got access token for item:", item_id);
+
+    // Store in database using admin client to bypass RLS
+    const { error: dbError } = await supabaseAdmin
+      .from("linked_accounts")
+      .insert({
+        user_id: user.id,
+        plaid_item_id: item_id,
+        plaid_access_token: access_token,
+        institution_name: metadata.institutionName,
+        institution_id: metadata.institutionId,
+      });
+
+    if (dbError) {
+      console.error("[exchangePlaidToken] Database error:", dbError);
+      return { success: false, error: "Failed to save account" };
     }
+
+    console.log("[exchangePlaidToken] Account saved, priming initial sync...");
+    
+    // Prime the initial sync (runs in background)
+    syncTransactionsForItem(item_id).catch((err) => {
+      console.error("[exchangePlaidToken] Initial sync failed:", err);
+    });
 
     revalidatePath("/settings");
     revalidatePath("/onboarding/plaid");
+    revalidatePath("/dashboard");
 
+    console.log("[exchangePlaidToken] Success!");
     return { success: true };
   } catch (error) {
-    console.error("Exchange token error:", error);
+    console.error("[exchangePlaidToken] Error:", error);
     return { success: false, error: "Failed to link account" };
   }
 }

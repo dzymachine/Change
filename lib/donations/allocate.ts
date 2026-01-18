@@ -68,13 +68,17 @@ export async function allocateRoundupToCharity(
     .order("priority", { ascending: true });
 
   if (charitiesError || !userCharities || userCharities.length === 0) {
-    await supabaseAdmin
+    const { error: updateError } = await supabaseAdmin
       .from("transactions")
       .update({
         processed_for_donation: true,
         donated_to_charity_id: null,
       })
       .eq("id", transactionId);
+
+    if (updateError) {
+      console.error("[allocateRoundupToCharity] Failed to mark transaction as processed:", updateError);
+    }
 
     return {
       success: true,
@@ -163,13 +167,17 @@ export async function allocateRoundupToCharity(
   }
 
   if (allocations.length === 0) {
-    await supabaseAdmin
+    const { error: updateError } = await supabaseAdmin
       .from("transactions")
       .update({
         processed_for_donation: true,
         donated_to_charity_id: null,
       })
       .eq("id", transactionId);
+
+    if (updateError) {
+      console.error("[allocateRoundupToCharity] Failed to mark transaction as processed (no allocations):", updateError);
+    }
 
     return {
       success: true,
@@ -179,13 +187,17 @@ export async function allocateRoundupToCharity(
   }
 
   // Mark transaction as processed
-  await supabaseAdmin
+  const { error: markError } = await supabaseAdmin
     .from("transactions")
     .update({
       processed_for_donation: true,
       donated_to_charity_id: allocations[0].charityId,
     })
     .eq("id", transactionId);
+
+  if (markError) {
+    console.error("[allocateRoundupToCharity] Failed to mark transaction as processed:", markError);
+  }
 
   // In priority mode, keep selected_charity_id pointing at the highest-priority active charity.
   if (mode === "priority") {

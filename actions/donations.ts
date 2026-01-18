@@ -72,6 +72,7 @@ export async function saveCharityGoals(
   } = await supabase.auth.getUser();
 
   if (!user) {
+    console.log("[saveCharityGoals] No authenticated user found");
     return { success: false, error: "Unauthorized" };
   }
 
@@ -144,6 +145,7 @@ export async function saveDonationMode(
   } = await supabase.auth.getUser();
 
   if (!user) {
+    console.log("[saveDonationMode] No authenticated user found");
     return { success: false, error: "Unauthorized" };
   }
 

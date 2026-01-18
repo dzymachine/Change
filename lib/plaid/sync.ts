@@ -111,7 +111,7 @@ async function processNewDonations(userId: string): Promise<void> {
   // Process each transaction
   for (const tx of transactions) {
     const result = await allocateRoundupToCharity(userId, tx.id, tx.roundup_amount);
-    if (result.success) {
+    if (result.success && result.charityId) {
       console.log(
         `Allocated $${tx.roundup_amount} to charity ${result.charityId}`
       );

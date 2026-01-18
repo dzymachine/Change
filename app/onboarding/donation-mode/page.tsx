@@ -181,7 +181,8 @@ export default function OnboardingDonationModePage() {
     // Clear sessionStorage and continue
     sessionStorage.removeItem("onboarding_charities");
     sessionStorage.removeItem("onboarding_goals");
-    router.push("/onboarding/plaid");
+    // Use full page navigation to ensure cookies from server action are properly handled
+    window.location.href = "/onboarding/plaid";
   };
 
   const totalSteps = charities.length > 1 ? 4 : 3;
