@@ -7,7 +7,7 @@
  */
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { sendDonationEmail } from "@/lib/email/sendDonationEmail";
+import { sendDonationEmail } from "@/lib/email";
 
 interface AllocationResult {
   success: boolean;
