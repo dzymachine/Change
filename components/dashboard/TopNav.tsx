@@ -6,25 +6,37 @@ import { usePathname } from "next/navigation";
 export function TopNav() {
   const pathname = usePathname();
 
+  const getLinkStyle = (path: string) => {
+    const isActive = pathname === path;
+    return {
+      backgroundColor: isActive ? "rgba(162, 137, 108, 0.1)" : "transparent",
+      color: isActive ? "var(--foreground)" : "var(--muted)",
+    };
+  };
+
   return (
-    <header className="flex items-center justify-between px-8 py-5 bg-gray-50">
+    <header 
+      className="flex items-center justify-between px-8 py-5"
+      style={{ 
+        backgroundColor: "var(--background)",
+        borderBottom: "1px solid var(--border)",
+      }}
+    >
       <Link
         href="/dashboard"
         prefetch={false}
-        className="text-3xl font-extrabold tracking-tight text-black hover:text-emerald-600 transition-colors"
+        className="font-body text-2xl tracking-wide transition-colors duration-200"
+        style={{ color: "var(--green)", fontWeight: 600 }}
       >
         Change.
       </Link>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <Link
           href="/dashboard"
           prefetch={false}
-          className={`p-2 rounded-lg transition-colors ${
-            pathname === "/dashboard"
-              ? "bg-gray-100 text-black"
-              : "text-gray-500 hover:bg-gray-50 hover:text-black"
-          }`}
+          className="p-2.5 transition-all duration-200"
+          style={getLinkStyle("/dashboard")}
           title="Dashboard"
         >
           <svg
@@ -44,11 +56,8 @@ export function TopNav() {
         <Link
           href="/profile"
           prefetch={false}
-          className={`p-2 rounded-lg transition-colors ${
-            pathname === "/profile"
-              ? "bg-gray-100 text-black"
-              : "text-gray-500 hover:bg-gray-50 hover:text-black"
-          }`}
+          className="p-2.5 transition-all duration-200"
+          style={getLinkStyle("/profile")}
           title="Profile"
         >
           <svg
@@ -68,11 +77,8 @@ export function TopNav() {
         <Link
           href="/settings"
           prefetch={false}
-          className={`p-2 rounded-lg transition-colors ${
-            pathname === "/settings"
-              ? "bg-gray-100 text-black"
-              : "text-gray-500 hover:bg-gray-50 hover:text-black"
-          }`}
+          className="p-2.5 transition-all duration-200"
+          style={getLinkStyle("/settings")}
           title="Settings"
         >
           <svg

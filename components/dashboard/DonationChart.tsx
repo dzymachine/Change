@@ -168,31 +168,58 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
 
   return (
     <>
-      <div className="bg-white rounded-2xl shadow-sm p-6">
-        <div className="flex items-start justify-between mb-6">
+      <div 
+        className="p-8"
+        style={{
+          backgroundColor: "var(--white)",
+          border: "1px solid var(--border)",
+          borderRadius: "12px",
+        }}
+      >
+        <div className="flex items-start justify-between mb-8">
           <div>
-            <p className="text-sm text-gray-500 mb-1">Total donated</p>
-            <p className="text-4xl font-bold text-black">${totalDonated.toFixed(2)}</p>
+            <p 
+              className="font-mono text-xs uppercase tracking-widest mb-2"
+              style={{ color: "var(--tan)" }}
+            >
+              Total donated
+            </p>
+            <p 
+              className="font-display text-4xl"
+              style={{ color: "var(--foreground)", fontWeight: 500 }}
+            >
+              ${totalDonated.toFixed(2)}
+            </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setShowAmountModal(true)}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-full text-sm font-medium hover:bg-emerald-700 transition-colors"
+              className="px-5 py-2.5 font-body text-sm transition-all duration-200"
+              style={{
+                backgroundColor: "var(--green)",
+                color: "var(--white)",
+                fontWeight: 500,
+              }}
             >
               Simulate Payment
             </button>
 
-            <div className="flex items-center bg-gray-100 rounded-full p-1">
+            <div 
+              className="flex items-center p-1"
+              style={{ backgroundColor: "rgba(162, 137, 108, 0.08)" }}
+            >
               {timeRanges.map((range) => (
                 <button
                   key={range}
                   onClick={() => setTimeRange(range)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                    timeRange === range
-                      ? "bg-black text-white"
-                      : "text-gray-600 hover:text-black"
-                  }`}
+                  className="px-3 py-1.5 font-mono text-xs transition-all duration-200"
+                  style={{
+                    backgroundColor: timeRange === range ? "var(--white)" : "transparent",
+                    color: timeRange === range ? "var(--foreground)" : "var(--muted)",
+                    fontWeight: timeRange === range ? 600 : 400,
+                    boxShadow: timeRange === range ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                  }}
                 >
                   {range}
                 </button>
@@ -210,8 +237,8 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
           >
             <defs>
               <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#10b981" stopOpacity="0.02" />
+                <stop offset="0%" stopColor="#007a55" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="#007a55" stopOpacity="0.02" />
               </linearGradient>
             </defs>
 
@@ -224,8 +251,8 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
             <path
               d={createPath(chartData)}
               fill="none"
-              stroke="#10b981"
-              strokeWidth="2.5"
+              stroke="#007a55"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
               className="transition-all duration-500"
@@ -238,19 +265,38 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
       {showAmountModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/40"
             onClick={() => !isSimulating && setShowAmountModal(false)}
           />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
-            <h3 className="text-lg font-semibold mb-4 text-black">Simulate a Transaction</h3>
+          <div 
+            className="relative w-full max-w-sm mx-4 p-8"
+            style={{
+              backgroundColor: "var(--white)",
+              border: "1px solid var(--border)",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+              borderRadius: "12px",
+            }}
+          >
+            <h3 
+              className="font-display text-xl mb-6"
+              style={{ color: "var(--foreground)", fontWeight: 500 }}
+            >
+              Simulate a Transaction
+            </h3>
             
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label 
+                  className="block font-body text-sm mb-2"
+                  style={{ color: "var(--muted)" }}
+                >
                   Transaction Amount
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <span 
+                    className="absolute left-4 top-1/2 -translate-y-1/2"
+                    style={{ color: "var(--muted)" }}
+                  >
                     $
                   </span>
                   <input
@@ -259,12 +305,27 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
                     onChange={(e) => setAmount(e.target.value)}
                     min="0.01"
                     step="0.01"
-                    className="w-full pl-7 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-black"
+                    className="w-full pl-8 pr-4 py-3 font-body text-base transition-all duration-200"
+                    style={{
+                      backgroundColor: "var(--white)",
+                      border: "1px solid var(--border)",
+                      color: "var(--foreground)",
+                      outline: "none",
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = "var(--green)";
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = "var(--border)";
+                    }}
                     placeholder="25.47"
                     disabled={isSimulating}
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p 
+                  className="font-mono text-xs mt-2"
+                  style={{ color: "var(--muted)" }}
+                >
                   Round-up will be: ${(Math.ceil(parseFloat(amount) || 0) - (parseFloat(amount) || 0)).toFixed(2) || "0.00"}
                 </p>
               </div>
@@ -275,7 +336,12 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
                   <button
                     key={quickAmount}
                     onClick={() => setAmount(quickAmount.toString())}
-                    className="flex-1 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors text-black"
+                    className="flex-1 py-2 font-mono text-sm transition-all duration-200"
+                    style={{
+                      backgroundColor: "transparent",
+                      border: "1px solid var(--border)",
+                      color: "var(--foreground)",
+                    }}
                     disabled={isSimulating}
                   >
                     ${quickAmount}
@@ -284,11 +350,13 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
               </div>
 
               {result && (
-                <div className={`p-3 rounded-lg text-sm ${
-                  result.success 
-                    ? "bg-emerald-50 text-emerald-700" 
-                    : "bg-red-50 text-red-700"
-                }`}>
+                <div 
+                  className="p-3 font-body text-sm"
+                  style={{
+                    backgroundColor: result.success ? "rgba(0, 122, 85, 0.08)" : "rgba(172, 52, 34, 0.08)",
+                    color: result.success ? "var(--green)" : "var(--red)",
+                  }}
+                >
                   {result.message}
                 </div>
               )}
@@ -297,14 +365,25 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
                 <button
                   onClick={() => setShowAmountModal(false)}
                   disabled={isSimulating}
-                  className="flex-1 py-2.5 border border-gray-200 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="flex-1 py-3 font-body text-sm transition-all duration-200 disabled:opacity-50"
+                  style={{
+                    backgroundColor: "transparent",
+                    border: "1px solid var(--border)",
+                    color: "var(--muted)",
+                    fontWeight: 500,
+                  }}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSimulate}
                   disabled={isSimulating}
-                  className="flex-1 py-2.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                  className="flex-1 py-3 font-body text-sm transition-all duration-200 disabled:opacity-50"
+                  style={{
+                    backgroundColor: "var(--green)",
+                    color: "var(--white)",
+                    fontWeight: 500,
+                  }}
                 >
                   {isSimulating ? "Processing..." : "Simulate"}
                 </button>

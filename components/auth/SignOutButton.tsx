@@ -21,7 +21,10 @@ export function SignOutButton({ variant = "default" }: SignOutButtonProps) {
       <button
         onClick={handleSignOut}
         disabled={isPending}
-        className="text-sm text-gray-500 hover:text-gray-700 disabled:opacity-50 transition-colors"
+        className="font-body text-sm transition-colors duration-200 disabled:opacity-50"
+        style={{ color: "var(--muted)" }}
+        onMouseEnter={(e) => e.currentTarget.style.color = "var(--foreground)"}
+        onMouseLeave={(e) => e.currentTarget.style.color = "var(--muted)"}
       >
         {isPending ? "..." : "Sign out"}
       </button>
@@ -32,7 +35,20 @@ export function SignOutButton({ variant = "default" }: SignOutButtonProps) {
     <button
       onClick={handleSignOut}
       disabled={isPending}
-      className="w-full py-2 px-4 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+      className="w-full py-2.5 px-4 font-body text-sm transition-all duration-200 disabled:opacity-50"
+      style={{ 
+        color: "var(--red)",
+        border: "1px solid var(--red)",
+        backgroundColor: "transparent",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = "var(--red)";
+        e.currentTarget.style.color = "var(--white)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = "transparent";
+        e.currentTarget.style.color = "var(--red)";
+      }}
     >
       {isPending ? "Signing out..." : "Sign out"}
     </button>

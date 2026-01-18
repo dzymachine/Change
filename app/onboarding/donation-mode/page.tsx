@@ -190,86 +190,177 @@ export default function OnboardingDonationModePage() {
   if (charities.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-gray-500">Loading...</div>
+        <div 
+          className="font-body text-base"
+          style={{ color: "var(--muted)" }}
+        >
+          Loading...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div className="text-center space-y-2">
-        <p className="text-sm text-emerald-600 font-medium">
+    <div className="space-y-10">
+      {/* Header */}
+      <header className="text-center">
+        <p 
+          className="font-mono text-xs uppercase tracking-widest mb-4"
+          style={{ color: "var(--tan)" }}
+        >
           Step 3 of {totalSteps}
         </p>
-        <h1 className="text-3xl font-bold text-black">How should we distribute?</h1>
-        <p className="text-gray-500 max-w-md mx-auto">
-          Choose how your donations are distributed across your selected
-          charities.
+        <h1 
+          className="font-display text-3xl md:text-4xl mb-4"
+          style={{ color: "var(--foreground)", fontWeight: 400 }}
+        >
+          How should we distribute?
+        </h1>
+        <p 
+          className="font-body text-base max-w-lg mx-auto leading-relaxed"
+          style={{ color: "var(--muted)" }}
+        >
+          Choose how your donations are distributed across your selected charities.
         </p>
-      </div>
+      </header>
 
       {/* Mode Selection */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Random Option */}
         <button
           type="button"
           onClick={() => setMode("random")}
-          className={`p-6 rounded-xl border-2 text-left transition-all ${
-            mode === "random"
-              ? "border-emerald-500 bg-emerald-50"
-              : "border-gray-200 hover:border-gray-300 bg-white"
-          }`}
+          className="p-6 text-left transition-all duration-200"
+          style={{
+            backgroundColor: mode === "random" ? "rgba(0, 122, 85, 0.04)" : "var(--white)",
+            border: mode === "random" ? "2px solid var(--green)" : "1px solid var(--border)",
+          }}
+          onMouseEnter={(e) => {
+            if (mode !== "random") {
+              e.currentTarget.style.borderColor = "var(--tan)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (mode !== "random") {
+              e.currentTarget.style.borderColor = "var(--border)";
+            }
+          }}
         >
           <div className="flex items-start gap-4">
-            <span className="text-3xl">🎲</span>
+            {/* Icon */}
+            <div 
+              className="w-12 h-12 flex items-center justify-center flex-shrink-0"
+              style={{ 
+                backgroundColor: mode === "random" ? "rgba(0, 122, 85, 0.1)" : "rgba(162, 137, 108, 0.1)",
+              }}
+            >
+              <svg 
+                className="w-6 h-6" 
+                fill="none" 
+                stroke={mode === "random" ? "var(--green)" : "var(--tan)"} 
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3" />
+              </svg>
+            </div>
             <div className="flex-1">
-              <p className="font-semibold text-lg text-black">Random</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Each donation is randomly assigned to one of your charities.
-                Great for supporting all causes equally over time.
+              <p 
+                className="font-display text-lg mb-2"
+                style={{ color: "var(--foreground)", fontWeight: 500 }}
+              >
+                Random
+              </p>
+              <p 
+                className="font-body text-sm leading-relaxed"
+                style={{ color: "var(--muted)" }}
+              >
+                Each donation is randomly assigned to one of your charities. Great for supporting all causes equally over time.
               </p>
             </div>
-            {mode === "random" && (
-              <span className="text-emerald-500 text-xl">✓</span>
-            )}
           </div>
         </button>
 
+        {/* Priority Option */}
         <button
           type="button"
           onClick={() => setMode("priority")}
-          className={`p-6 rounded-xl border-2 text-left transition-all ${
-            mode === "priority"
-              ? "border-emerald-500 bg-emerald-50"
-              : "border-gray-200 hover:border-gray-300 bg-white"
-          }`}
+          className="p-6 text-left transition-all duration-200"
+          style={{
+            backgroundColor: mode === "priority" ? "rgba(0, 122, 85, 0.04)" : "var(--white)",
+            border: mode === "priority" ? "2px solid var(--green)" : "1px solid var(--border)",
+          }}
+          onMouseEnter={(e) => {
+            if (mode !== "priority") {
+              e.currentTarget.style.borderColor = "var(--tan)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (mode !== "priority") {
+              e.currentTarget.style.borderColor = "var(--border)";
+            }
+          }}
         >
           <div className="flex items-start gap-4">
-            <span className="text-3xl">📊</span>
+            {/* Icon */}
+            <div 
+              className="w-12 h-12 flex items-center justify-center flex-shrink-0"
+              style={{ 
+                backgroundColor: mode === "priority" ? "rgba(0, 122, 85, 0.1)" : "rgba(162, 137, 108, 0.1)",
+              }}
+            >
+              <svg 
+                className="w-6 h-6" 
+                fill="none" 
+                stroke={mode === "priority" ? "var(--green)" : "var(--tan)"} 
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h14.25M3 9h9.75M3 13.5h9.75m4.5-4.5v12m0 0l-3.75-3.75M17.25 21l3.75-3.75" />
+              </svg>
+            </div>
             <div className="flex-1">
-              <p className="font-semibold text-lg text-black">Priority Queue</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Donations go to your #1 charity until its goal is met, then move
-                to #2, and so on.
+              <p 
+                className="font-display text-lg mb-2"
+                style={{ color: "var(--foreground)", fontWeight: 500 }}
+              >
+                Priority Queue
+              </p>
+              <p 
+                className="font-body text-sm leading-relaxed"
+                style={{ color: "var(--muted)" }}
+              >
+                Donations go to your #1 charity until its goal is met, then move to #2, and so on.
               </p>
             </div>
-            {mode === "priority" && (
-              <span className="text-emerald-500 text-xl">✓</span>
-            )}
           </div>
         </button>
       </div>
 
       {/* Priority Ranking (only shown when priority mode selected) */}
       {mode === "priority" && (
-        <div className="space-y-4">
+        <div 
+          className="space-y-6 animate-fade-in"
+          style={{
+            animation: "fadeIn 0.4s ease-out forwards",
+          }}
+        >
           <div className="text-center">
-            <h2 className="text-lg font-semibold text-black">Rank your charities</h2>
-            <p className="text-sm text-gray-500">
+            <h2 
+              className="font-display text-xl mb-2"
+              style={{ color: "var(--foreground)", fontWeight: 500 }}
+            >
+              Rank your charities
+            </h2>
+            <p 
+              className="font-body text-sm"
+              style={{ color: "var(--muted)" }}
+            >
               Drag to reorder. Donations fill goals from top to bottom.
             </p>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {charities.map((item, index) => (
               <div
                 key={item.charity.id}
@@ -277,23 +368,64 @@ export default function OnboardingDonationModePage() {
                 onDragStart={() => handleDragStart(index)}
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragEnd={handleDragEnd}
-                className={`flex items-center gap-4 p-4 bg-white rounded-xl border-2 cursor-move transition-all ${
-                  draggedIndex === index
-                    ? "border-emerald-500 shadow-lg scale-[1.02]"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
+                className="flex items-center gap-4 p-4 cursor-move transition-all duration-200"
+                style={{
+                  backgroundColor: "var(--white)",
+                  border: draggedIndex === index ? "2px solid var(--green)" : "1px solid var(--border)",
+                  transform: draggedIndex === index ? "scale(1.02)" : "scale(1)",
+                  boxShadow: draggedIndex === index ? "0 4px 12px rgba(0,0,0,0.1)" : "none",
+                }}
               >
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 font-bold text-sm">
+                {/* Priority Number */}
+                <div 
+                  className="flex items-center justify-center w-8 h-8 font-mono text-sm"
+                  style={{ 
+                    backgroundColor: "rgba(0, 122, 85, 0.1)",
+                    color: "var(--green)",
+                    fontWeight: 600,
+                  }}
+                >
                   {index + 1}
                 </div>
-                <span className="text-2xl">{item.charity.logo}</span>
-                <div className="flex-1">
-                  <p className="font-medium text-black">{item.charity.name}</p>
-                  <p className="text-sm text-gray-500">
+                
+                {/* Charity Image or Initial */}
+                {item.charity.imageUrl ? (
+                  <img
+                    src={item.charity.imageUrl}
+                    alt={item.charity.name}
+                    className="w-10 h-10 object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div 
+                    className="w-10 h-10 flex items-center justify-center flex-shrink-0 font-display"
+                    style={{ 
+                      background: "linear-gradient(135deg, rgba(162, 137, 108, 0.15) 0%, rgba(0, 122, 85, 0.1) 100%)",
+                      color: "var(--tan)",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {item.charity.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                
+                {/* Charity Info */}
+                <div className="flex-1 min-w-0">
+                  <p 
+                    className="font-body text-base truncate"
+                    style={{ color: "var(--foreground)", fontWeight: 500 }}
+                  >
+                    {item.charity.name}
+                  </p>
+                  <p 
+                    className="font-mono text-xs"
+                    style={{ color: "var(--muted)" }}
+                  >
                     Goal: ${item.goalAmount}
                   </p>
                 </div>
-                <div className="text-gray-400">
+                
+                {/* Drag Handle */}
+                <div style={{ color: "var(--muted)" }}>
                   <svg
                     className="w-5 h-5"
                     fill="none"
@@ -303,7 +435,7 @@ export default function OnboardingDonationModePage() {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeWidth={2}
+                      strokeWidth={1.5}
                       d="M4 8h16M4 16h16"
                     />
                   </svg>
@@ -316,19 +448,52 @@ export default function OnboardingDonationModePage() {
 
       {/* Random mode info */}
       {mode === "random" && (
-        <div className="bg-gray-50 rounded-xl p-6 text-center">
-          <p className="text-gray-600">
+        <div 
+          className="p-6 text-center"
+          style={{ 
+            backgroundColor: "rgba(162, 137, 108, 0.06)",
+            animation: "fadeIn 0.4s ease-out forwards",
+          }}
+        >
+          <p 
+            className="font-body text-sm mb-4"
+            style={{ color: "var(--muted)" }}
+          >
             Your donations will be randomly distributed to:
           </p>
-          <div className="flex justify-center gap-4 mt-4 flex-wrap">
+          <div className="flex justify-center gap-3 flex-wrap">
             {charities.map((item) => (
               <div
                 key={item.charity.id}
-                className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border"
+                className="flex items-center gap-2 px-3 py-2"
+                style={{ 
+                  backgroundColor: "var(--white)",
+                  border: "1px solid var(--border)",
+                }}
               >
-                <span className="text-xl">{item.charity.logo}</span>
-                <span className="text-sm font-medium">
-                  <span className="text-black">{item.charity.name}</span>
+                {item.charity.imageUrl ? (
+                  <img
+                    src={item.charity.imageUrl}
+                    alt={item.charity.name}
+                    className="w-6 h-6 object-cover"
+                  />
+                ) : (
+                  <div 
+                    className="w-6 h-6 flex items-center justify-center font-display text-xs"
+                    style={{ 
+                      background: "linear-gradient(135deg, rgba(162, 137, 108, 0.15) 0%, rgba(0, 122, 85, 0.1) 100%)",
+                      color: "var(--tan)",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {item.charity.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span 
+                  className="font-body text-sm"
+                  style={{ color: "var(--foreground)", fontWeight: 500 }}
+                >
+                  {item.charity.name}
                 </span>
               </div>
             ))}
@@ -336,13 +501,25 @@ export default function OnboardingDonationModePage() {
         </div>
       )}
 
-      {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+      {/* Error message */}
+      {error && (
+        <p 
+          className="font-body text-sm text-center"
+          style={{ color: "var(--red)" }}
+        >
+          {error}
+        </p>
+      )}
 
+      {/* Navigation */}
       <div className="flex justify-between items-center pt-4">
         <button
           type="button"
           onClick={() => router.push("/onboarding/goals")}
-          className="text-gray-500 hover:text-gray-700"
+          className="font-body text-sm transition-colors duration-200"
+          style={{ color: "var(--muted)" }}
+          onMouseEnter={(e) => e.currentTarget.style.color = "var(--foreground)"}
+          onMouseLeave={(e) => e.currentTarget.style.color = "var(--muted)"}
           disabled={isSaving}
         >
           Back
@@ -351,11 +528,23 @@ export default function OnboardingDonationModePage() {
           type="button"
           onClick={handleContinue}
           disabled={!mode || isSaving}
-          className={`px-6 py-2 rounded-lg transition-colors ${
-            mode && !isSaving
-              ? "bg-emerald-600 text-white hover:bg-emerald-700"
-              : "bg-gray-200 text-gray-400 cursor-not-allowed"
-          }`}
+          className="px-8 py-3 font-body text-sm tracking-wide transition-all duration-200"
+          style={{
+            backgroundColor: mode && !isSaving ? "var(--green)" : "var(--border)",
+            color: mode && !isSaving ? "var(--white)" : "var(--muted)",
+            cursor: mode && !isSaving ? "pointer" : "not-allowed",
+            fontWeight: 500,
+          }}
+          onMouseEnter={(e) => {
+            if (mode && !isSaving) {
+              e.currentTarget.style.backgroundColor = "var(--green-light)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (mode && !isSaving) {
+              e.currentTarget.style.backgroundColor = "var(--green)";
+            }
+          }}
         >
           {isSaving ? "Saving..." : "Continue"}
         </button>

@@ -40,40 +40,76 @@ export default function OnboardingCharitiesPage() {
   const totalSteps = selectedCharities.length > 1 ? 4 : 3;
 
   return (
-    <div className="space-y-8">
-      <div className="text-center space-y-2">
-        <p className="text-sm text-emerald-600 font-medium">
+    <div className="space-y-10">
+      {/* Header Section */}
+      <header className="text-center">
+        <p 
+          className="font-mono text-xs uppercase tracking-widest mb-4"
+          style={{ color: "var(--tan)" }}
+        >
           Step 1 of {totalSteps}
         </p>
-        <h1 className="text-3xl font-bold text-black">Choose your charities</h1>
-        <p className="text-gray-500 max-w-md mx-auto">
-          Select up to 5 charities that will receive your round-up
-          donations. You can change this anytime.
+        <h1 
+          className="font-display text-3xl md:text-4xl mb-4"
+          style={{ color: "var(--foreground)", fontWeight: 400 }}
+        >
+          Choose your charities
+        </h1>
+        <p 
+          className="font-body text-base max-w-lg mx-auto leading-relaxed"
+          style={{ color: "var(--muted)" }}
+        >
+          Select up to 5 charities that will receive your round-up donations. 
+          You can change this anytime.
         </p>
-      </div>
+      </header>
 
+      {/* Charity Picker */}
       <CharityPicker selected={selectedCharities} onToggle={handleToggle} />
 
+      {/* Selection Status */}
       {selectedCharities.length > 0 && (
-        <p className="text-center text-sm text-gray-500">
+        <p 
+          className="text-center font-body text-sm"
+          style={{ color: "var(--muted)" }}
+        >
           {selectedCharities.length} charit
           {selectedCharities.length === 1 ? "y" : "ies"} selected
         </p>
       )}
+      
       {selectionError && (
-        <p className="text-center text-sm text-red-500">{selectionError}</p>
+        <p 
+          className="text-center font-body text-sm"
+          style={{ color: "var(--red)" }}
+        >
+          {selectionError}
+        </p>
       )}
 
+      {/* Continue Button */}
       <div className="flex justify-end pt-4">
         <button
           type="button"
           onClick={handleContinue}
           disabled={selectedCharities.length === 0}
-          className={`px-6 py-2 rounded-lg transition-colors ${
-            selectedCharities.length > 0
-              ? "bg-emerald-600 text-white hover:bg-emerald-700"
-              : "bg-gray-200 text-gray-400 cursor-not-allowed"
-          }`}
+          className="px-8 py-3 font-body text-sm tracking-wide transition-all duration-200"
+          style={{
+            backgroundColor: selectedCharities.length > 0 ? "var(--green)" : "var(--border)",
+            color: selectedCharities.length > 0 ? "var(--white)" : "var(--muted)",
+            cursor: selectedCharities.length > 0 ? "pointer" : "not-allowed",
+            fontWeight: 500,
+          }}
+          onMouseEnter={(e) => {
+            if (selectedCharities.length > 0) {
+              e.currentTarget.style.backgroundColor = "var(--green-light)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (selectedCharities.length > 0) {
+              e.currentTarget.style.backgroundColor = "var(--green)";
+            }
+          }}
         >
           Continue
         </button>

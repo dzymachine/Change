@@ -30,19 +30,29 @@ export default async function OnboardingLayout({
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header with sign out */}
-      <header className="border-b p-4">
+    <div 
+      className="min-h-screen flex flex-col"
+      style={{ backgroundColor: "var(--white)" }}
+    >
+      {/* Header */}
+      <header 
+        className="py-5 px-6"
+        style={{ borderBottom: "1px solid var(--border)" }}
+      >
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <span className="text-xl font-bold text-emerald-600">Change.</span>
-          <div className="flex items-center gap-4">
-            <SignOutButton variant="compact" />
-          </div>
+          <span 
+            className="font-body text-xl tracking-wide"
+            style={{ color: "var(--green)", fontWeight: 600 }}
+          >
+            Change.
+          </span>
+          <SignOutButton variant="compact" />
         </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-2xl">{children}</div>
+      {/* Main content */}
+      <main className="flex-1 flex items-start justify-center px-6 py-12">
+        <div className="w-full max-w-3xl">{children}</div>
       </main>
     </div>
   );

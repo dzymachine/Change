@@ -76,9 +76,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Demo: Simulate Purchase - For hackathon demo */}
-      <SimulatePurchase />
-
       {/* Charities Section */}
       <CharitiesSection
         charities={charityGoals}
@@ -88,6 +85,9 @@ export default async function DashboardPage() {
 
       {/* Total Donated & Chart */}
       <DonationChart totalDonated={totalDonated} />
+
+      {/* Demo: Simulate Purchase - Small, at bottom */}
+      <SimulatePurchase />
     </div>
   );
 }

@@ -141,25 +141,42 @@ export function AddCharityModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/40"
         onClick={onClose}
       />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b">
+      <div 
+        className="relative w-full max-w-md mx-4 max-h-[80vh] flex flex-col"
+        style={{
+          backgroundColor: "var(--white)",
+          border: "1px solid var(--border)",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+        }}
+      >
+        <div 
+          className="flex items-center justify-between p-6"
+          style={{ borderBottom: "1px solid var(--border)" }}
+        >
           <div>
-            <h2 className="text-lg font-semibold text-black">
+            <h2 
+              className="font-display text-xl"
+              style={{ color: "var(--foreground)", fontWeight: 500 }}
+            >
               {step === "select" ? "Add Charity" : "Set Goals"}
             </h2>
-            <p className="text-xs text-gray-500 mt-1">
+            <p 
+              className="font-mono text-xs uppercase tracking-wider mt-1"
+              style={{ color: "var(--tan)" }}
+            >
               Step {step === "select" ? "1" : "2"} of 2
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-1 transition-colors duration-200"
+            style={{ color: "var(--muted)" }}
           >
             <svg
-              className="w-5 h-5 text-gray-500"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -167,7 +184,7 @@ export function AddCharityModal({
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
+                strokeWidth={1.5}
                 d="M6 18L18 6M6 6l12 12"
               />
             </svg>
@@ -177,31 +194,48 @@ export function AddCharityModal({
         <div className="flex-1 overflow-y-auto p-6">
           {step === "select" ? (
             loading ? (
-              <p className="text-center text-gray-500 py-8">Loading charities...</p>
+              <p 
+                className="text-center font-body py-8"
+                style={{ color: "var(--muted)" }}
+              >
+                Loading charities...
+              </p>
             ) : availableCharities.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">
+              <p 
+                className="text-center font-body py-8"
+                style={{ color: "var(--muted)" }}
+              >
                 You&apos;ve added all available charities!
               </p>
             ) : (
-              <div className="space-y-2">
-                <p className="text-xs text-gray-500">
+              <div className="space-y-3">
+                <p 
+                  className="font-body text-sm"
+                  style={{ color: "var(--muted)" }}
+                >
                   Select up to {maxSelectable} charities
                 </p>
                 {availableCharities.map((charity) => {
                   const isExpanded = expandedIds.has(charity.id);
+                  const isSelected = selectedCharities.some((item) => item.id === charity.id);
 
                   return (
                     <button
                       key={charity.id}
                       onClick={() => toggleCharity(charity)}
-                      className={`w-full p-4 rounded-xl border text-left transition-all ${
-                        selectedCharities.some((item) => item.id === charity.id)
-                          ? "border-emerald-500 bg-emerald-50"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
+                      className="w-full p-4 text-left transition-all duration-200"
+                      style={{
+                        backgroundColor: isSelected ? "rgba(0, 122, 85, 0.04)" : "var(--white)",
+                        border: isSelected ? "2px solid var(--green)" : "1px solid var(--border)",
+                      }}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-20 h-20 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0">
+                        <div 
+                          className="w-16 h-16 overflow-hidden flex items-center justify-center flex-shrink-0"
+                          style={{ 
+                            backgroundColor: charity.imageUrl ? "transparent" : "rgba(162, 137, 108, 0.1)"
+                          }}
+                        >
                           {charity.imageUrl ? (
                             <img
                               src={charity.imageUrl}
@@ -209,15 +243,21 @@ export function AddCharityModal({
                               className="h-full w-full object-cover"
                             />
                           ) : (
-                            <span className="text-3xl">{charity.logo}</span>
+                            <span className="text-2xl">{charity.logo}</span>
                           )}
                         </div>
-                        <div>
-                          <p className="font-semibold text-black">{charity.name}</p>
+                        <div className="flex-1 min-w-0">
+                          <p 
+                            className="font-body truncate"
+                            style={{ color: "var(--foreground)", fontWeight: 500 }}
+                          >
+                            {charity.name}
+                          </p>
                           <p
-                            className={`text-sm text-gray-500 ${
+                            className={`font-body text-sm leading-relaxed ${
                               isExpanded ? "" : "line-clamp-2"
                             }`}
+                            style={{ color: "var(--muted)" }}
                           >
                             {charity.description}
                           </p>
@@ -236,7 +276,8 @@ export function AddCharityModal({
                                   toggleExpanded(charity.id);
                                 }
                               }}
-                              className="text-sm text-emerald-600 hover:underline mt-1 inline-flex"
+                              className="font-body text-sm mt-1 inline-flex transition-colors duration-200"
+                              style={{ color: "var(--green)" }}
                             >
                               {isExpanded ? "Read less" : "Read more"}
                             </span>
@@ -249,17 +290,26 @@ export function AddCharityModal({
               </div>
             )
           ) : (
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-gray-700">
+            <div className="space-y-4">
+              <label 
+                className="block font-body text-sm"
+                style={{ color: "var(--muted)" }}
+              >
                 Donation Goals
               </label>
               {selectedCharities.map((charity) => (
                 <div key={charity.id} className="flex items-center gap-3">
-                  <div className="flex-1 text-sm text-gray-700">
+                  <div 
+                    className="flex-1 font-body text-sm truncate"
+                    style={{ color: "var(--foreground)" }}
+                  >
                     {charity.name}
                   </div>
                   <div className="relative w-32">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    <span 
+                      className="absolute left-3 top-1/2 -translate-y-1/2"
+                      style={{ color: "var(--muted)" }}
+                    >
                       $
                     </span>
                     <input
@@ -277,19 +327,42 @@ export function AddCharityModal({
                       min="1"
                       step="0.01"
                       placeholder="10.00"
-                      className="w-full pl-7 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-black"
+                      className="w-full pl-7 pr-3 py-2 font-body text-sm transition-all duration-200"
+                      style={{
+                        backgroundColor: "var(--white)",
+                        border: "1px solid var(--border)",
+                        color: "var(--foreground)",
+                        outline: "none",
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = "var(--green)";
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = "var(--border)";
+                      }}
                     />
                   </div>
                 </div>
               ))}
               {goalError && (
-                <p className="text-sm text-red-500">{goalError}</p>
+                <p 
+                  className="font-body text-sm"
+                  style={{ color: "var(--red)" }}
+                >
+                  {goalError}
+                </p>
               )}
             </div>
           )}
         </div>
 
-        <div className="p-6 border-t bg-gray-50 rounded-b-2xl">
+        <div 
+          className="p-6"
+          style={{ 
+            borderTop: "1px solid var(--border)",
+            backgroundColor: "rgba(162, 137, 108, 0.03)",
+          }}
+        >
           {step === "select" ? (
             <button
               onClick={() => setStep("goals")}
@@ -298,7 +371,12 @@ export function AddCharityModal({
                 isPending ||
                 availableCharities.length === 0
               }
-              className="w-full py-2.5 bg-black text-white rounded-lg font-medium transition-colors hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="w-full py-3 font-body text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: selectedCharities.length > 0 ? "var(--green)" : "var(--border)",
+                color: selectedCharities.length > 0 ? "var(--white)" : "var(--muted)",
+                fontWeight: 500,
+              }}
             >
               Next: Set goals
             </button>
@@ -306,14 +384,25 @@ export function AddCharityModal({
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setStep("select")}
-                className="flex-1 py-2.5 border border-gray-200 text-gray-700 rounded-lg font-medium transition-colors hover:bg-gray-100"
+                className="flex-1 py-3 font-body text-sm transition-all duration-200"
+                style={{
+                  backgroundColor: "transparent",
+                  border: "1px solid var(--border)",
+                  color: "var(--muted)",
+                  fontWeight: 500,
+                }}
               >
                 Back
               </button>
               <button
                 onClick={handleAdd}
                 disabled={selectedCharities.length === 0 || isPending}
-                className="flex-1 py-2.5 bg-black text-white rounded-lg font-medium transition-colors hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="flex-1 py-3 font-body text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  backgroundColor: "var(--green)",
+                  color: "var(--white)",
+                  fontWeight: 500,
+                }}
               >
                 {isPending
                   ? "Adding..."

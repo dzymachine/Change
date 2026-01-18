@@ -216,42 +216,56 @@ export default function OnboardingGoalsPage() {
   if (selectedCharities.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-gray-500">Loading...</div>
+        <div 
+          className="font-body text-base"
+          style={{ color: "var(--muted)" }}
+        >
+          Loading...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div className="text-center space-y-2">
-        <p className="text-sm text-emerald-600 font-medium">
+    <div className="space-y-10">
+      {/* Header */}
+      <header className="text-center">
+        <p 
+          className="font-mono text-xs uppercase tracking-widest mb-4"
+          style={{ color: "var(--tan)" }}
+        >
           Step 2 of {totalSteps}
         </p>
-        <h1 className="text-3xl font-bold text-black">Set your goals</h1>
-        <p className="text-gray-500 max-w-md mx-auto">
-          Set a donation goal for each charity. This helps you track your
-          giving progress.
+        <h1 
+          className="font-display text-3xl md:text-4xl mb-4"
+          style={{ color: "var(--foreground)", fontWeight: 400 }}
+        >
+          Set your goals
+        </h1>
+        <p 
+          className="font-body text-base max-w-lg mx-auto leading-relaxed"
+          style={{ color: "var(--muted)" }}
+        >
+          Set a donation goal for each charity. This helps you track your giving progress.
         </p>
-      </div>
+      </header>
 
       {/* Progress indicator */}
       <div className="flex justify-center gap-2">
         {selectedCharities.map((_, index) => (
           <div
             key={index}
-            className={`w-2 h-2 rounded-full transition-colors ${
-              index < currentIndex
-                ? "bg-emerald-500"
-                : index === currentIndex
-                  ? "bg-emerald-600 w-4"
-                  : "bg-gray-300"
-            }`}
+            className="h-1 transition-all duration-300"
+            style={{
+              width: index === currentIndex ? "2rem" : "0.5rem",
+              backgroundColor: index <= currentIndex ? "var(--green)" : "var(--border)",
+            }}
           />
         ))}
       </div>
 
       {/* Charity card with sliding animation */}
-      <div className="relative overflow-hidden min-h-[280px]">
+      <div className="relative overflow-hidden min-h-[320px]">
         <div
           className={`transition-all duration-300 ease-in-out ${
             isSliding
@@ -261,30 +275,67 @@ export default function OnboardingGoalsPage() {
               : "translate-x-0 opacity-100"
           }`}
         >
-          <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 text-center space-y-6">
+          <div 
+            className="p-8 text-center space-y-6"
+            style={{ 
+              backgroundColor: "var(--white)",
+              border: "1px solid var(--border)",
+            }}
+          >
             {currentCharity.imageUrl ? (
               <img
                 src={currentCharity.imageUrl}
                 alt={currentCharity.name}
-                className="mx-auto h-28 w-28 rounded-2xl object-cover"
+                className="mx-auto h-28 w-28 object-cover"
+                style={{ backgroundColor: "var(--border)" }}
               />
             ) : (
-              <div className="text-6xl">{currentCharity.logo}</div>
+              <div 
+                className="mx-auto h-28 w-28 flex items-center justify-center"
+                style={{ 
+                  background: "linear-gradient(135deg, rgba(162, 137, 108, 0.1) 0%, rgba(0, 122, 85, 0.08) 100%)"
+                }}
+              >
+                {currentCharity.logo ? (
+                  <span className="text-5xl">{currentCharity.logo}</span>
+                ) : (
+                  <span 
+                    className="text-4xl font-display"
+                    style={{ color: "var(--tan)", fontWeight: 500 }}
+                  >
+                    {currentCharity.name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
             )}
             <div>
-              <h2 className="text-2xl font-bold text-black">{currentCharity.name}</h2>
-              <p className="text-gray-500 mt-1">{currentCharity.description}</p>
+              <h2 
+                className="font-display text-2xl mb-2"
+                style={{ color: "var(--foreground)", fontWeight: 500 }}
+              >
+                {currentCharity.name}
+              </h2>
+              <p 
+                className="font-body text-sm leading-relaxed max-w-md mx-auto"
+                style={{ color: "var(--muted)" }}
+              >
+                {currentCharity.description}
+              </p>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3 pt-2">
               <label
                 htmlFor="goal"
-                className="block text-sm font-medium text-gray-700"
+                className="block font-body text-sm"
+                style={{ color: "var(--muted)" }}
               >
                 Donation Goal
               </label>
-              <div className="relative max-w-xs mx-auto">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-xl">
+              <div className="relative max-w-[200px] mx-auto">
+                <span 
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-body"
+                  style={{ color: "var(--muted)" }}
+                >
                   $
                 </span>
                 <input
@@ -297,40 +348,84 @@ export default function OnboardingGoalsPage() {
                   onChange={(e) => setCurrentGoal(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="100"
-                  className="w-full pl-10 pr-4 py-3 text-2xl text-center border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-colors text-black"
+                  className="w-full pl-10 pr-4 py-3 text-2xl text-center font-body transition-all duration-200"
+                  style={{
+                    backgroundColor: "var(--white)",
+                    border: "1px solid var(--border)",
+                    color: "var(--foreground)",
+                    outline: "none",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = "var(--green)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "var(--border)";
+                  }}
                   disabled={isSaving}
                 />
               </div>
-              <p className="text-xs text-gray-400">Press Enter to continue</p>
+              <p 
+                className="font-mono text-xs"
+                style={{ color: "var(--muted)", opacity: 0.6 }}
+              >
+                Press Enter to continue
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+      {/* Error message */}
+      {error && (
+        <p 
+          className="font-body text-sm text-center"
+          style={{ color: "var(--red)" }}
+        >
+          {error}
+        </p>
+      )}
 
+      {/* Navigation */}
       <div className="flex justify-between items-center pt-4">
         <button
           type="button"
           onClick={() => router.push("/onboarding/charities")}
-          className="text-gray-500 hover:text-gray-700"
+          className="font-body text-sm transition-colors duration-200"
+          style={{ color: "var(--muted)" }}
+          onMouseEnter={(e) => e.currentTarget.style.color = "var(--foreground)"}
+          onMouseLeave={(e) => e.currentTarget.style.color = "var(--muted)"}
           disabled={isSaving}
         >
           Back
         </button>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-500">
+        <div className="flex items-center gap-6">
+          <span 
+            className="font-mono text-xs"
+            style={{ color: "var(--muted)" }}
+          >
             {currentIndex + 1} of {selectedCharities.length}
           </span>
           <button
             type="button"
             onClick={handleNext}
             disabled={!currentGoal || isSaving}
-            className={`px-6 py-2 rounded-lg transition-colors ${
-              currentGoal && !isSaving
-                ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
-            }`}
+            className="px-8 py-3 font-body text-sm tracking-wide transition-all duration-200"
+            style={{
+              backgroundColor: currentGoal && !isSaving ? "var(--green)" : "var(--border)",
+              color: currentGoal && !isSaving ? "var(--white)" : "var(--muted)",
+              cursor: currentGoal && !isSaving ? "pointer" : "not-allowed",
+              fontWeight: 500,
+            }}
+            onMouseEnter={(e) => {
+              if (currentGoal && !isSaving) {
+                e.currentTarget.style.backgroundColor = "var(--green-light)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (currentGoal && !isSaving) {
+                e.currentTarget.style.backgroundColor = "var(--green)";
+              }
+            }}
           >
             {isSaving
               ? "Saving..."

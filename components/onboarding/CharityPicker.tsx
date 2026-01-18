@@ -114,20 +114,32 @@ export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
 
   if (loading) {
     return (
-      <div className="text-center py-8">
-        <div className="animate-pulse text-gray-500">Loading charities...</div>
+      <div className="text-center py-12">
+        <div 
+          className="font-body text-base animate-pulse"
+          style={{ color: "var(--muted)" }}
+        >
+          Loading charities...
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-8 text-red-500">
-        {error}
-        <br />
+      <div className="text-center py-12">
+        <p 
+          className="font-body text-base mb-3"
+          style={{ color: "var(--red)" }}
+        >
+          {error}
+        </p>
         <button 
           onClick={() => window.location.reload()} 
-          className="mt-2 text-sm text-emerald-600 hover:underline"
+          className="font-body text-sm transition-colors duration-200"
+          style={{ color: "var(--green)" }}
+          onMouseEnter={(e) => e.currentTarget.style.color = "var(--green-light)"}
+          onMouseLeave={(e) => e.currentTarget.style.color = "var(--green)"}
         >
           Try again
         </button>
@@ -137,7 +149,10 @@ export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
 
   if (charities.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div 
+        className="text-center py-12 font-body text-base"
+        style={{ color: "var(--muted)" }}
+      >
         No charities available. Please check back later.
       </div>
     );
@@ -156,20 +171,34 @@ export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Category Filter Buttons (single-select) */}
-      <div className="flex flex-wrap gap-2 justify-center">
+      <div className="flex flex-wrap gap-3 justify-center">
         {FILTER_CATEGORIES.map((category) => {
           const isActive = activeFilter === category;
           return (
             <button
               key={category}
               onClick={() => selectFilter(category)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                isActive
-                  ? "bg-emerald-600 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+              className="px-5 py-2 font-body text-sm transition-all duration-200"
+              style={{
+                backgroundColor: isActive ? "var(--green)" : "transparent",
+                color: isActive ? "var(--white)" : "var(--muted)",
+                border: isActive ? "1px solid var(--green)" : "1px solid var(--border)",
+                fontWeight: isActive ? 500 : 400,
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.borderColor = "var(--green)";
+                  e.currentTarget.style.color = "var(--green)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.borderColor = "var(--border)";
+                  e.currentTarget.style.color = "var(--muted)";
+                }
+              }}
             >
               {category}
             </button>
@@ -178,13 +207,19 @@ export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
       </div>
 
       {/* Results info */}
-      <p className="text-center text-sm text-gray-500">
+      <p 
+        className="text-center font-body text-sm"
+        style={{ color: "var(--muted)" }}
+      >
         Showing {displayedCharities.length} charit{displayedCharities.length === 1 ? "y" : "ies"} in {activeFilter}
       </p>
 
       {/* No results message */}
       {displayedCharities.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
+        <div 
+          className="text-center py-12 font-body text-base"
+          style={{ color: "var(--muted)" }}
+        >
           No charities found in {activeFilter}. Check back later!
         </div>
       )}
@@ -199,38 +234,61 @@ export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
           <button
             key={charity.id}
             onClick={() => onToggle(charity)}
-            className={`p-6 rounded-2xl border-2 text-left transition-all ${
-              isSelected
-                ? "border-emerald-500 bg-emerald-50"
-                : "border-gray-200 hover:border-gray-300 bg-white"
-            }`}
+            className="p-5 text-left transition-all duration-200"
+            style={{
+              backgroundColor: isSelected ? "rgba(0, 122, 85, 0.04)" : "var(--white)",
+              border: isSelected ? "2px solid var(--green)" : "1px solid var(--border)",
+            }}
+            onMouseEnter={(e) => {
+              if (!isSelected) {
+                e.currentTarget.style.borderColor = "var(--tan)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isSelected) {
+                e.currentTarget.style.borderColor = "var(--border)";
+              }
+            }}
           >
             <div className="flex flex-col gap-4">
               {typeof charity.imageUrl === "string" && charity.imageUrl ? (
                 <img
                   src={charity.imageUrl}
                   alt={charity.name}
-                  className="h-44 w-full rounded-xl object-cover"
+                  className="h-44 w-full object-cover"
+                  style={{ backgroundColor: "var(--border)" }}
                 />
               ) : (
-                <div className="h-44 w-full rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center">
+                <div 
+                  className="h-44 w-full flex items-center justify-center"
+                  style={{ 
+                    background: "linear-gradient(135deg, rgba(162, 137, 108, 0.1) 0%, rgba(0, 122, 85, 0.08) 100%)"
+                  }}
+                >
                   {charity.logo ? (
                     <span className="text-5xl">{charity.logo}</span>
                   ) : (
-                    <span className="text-4xl font-bold text-emerald-300">
+                    <span 
+                      className="text-4xl font-display"
+                      style={{ color: "var(--tan)", fontWeight: 500 }}
+                    >
                       {charity.name.charAt(0).toUpperCase()}
                     </span>
                   )}
                 </div>
               )}
               <div className="flex-1">
-                <p className="text-lg font-semibold text-black">
+                <p 
+                  className="font-body text-lg mb-1"
+                  style={{ color: "var(--foreground)", fontWeight: 500 }}
+                >
                   {charity.name}
                 </p>
                 <p
-                  className={`text-sm text-gray-500 mt-1 ${
+                  className={`font-body text-sm leading-relaxed ${
                     isExpanded ? "" : "line-clamp-2"
                   }`}
+                  style={{ color: "var(--muted)" }}
                 >
                   {charity.description}
                 </p>
@@ -249,7 +307,10 @@ export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
                         toggleExpanded(charity.id);
                       }
                     }}
-                    className="text-sm text-emerald-600 hover:underline mt-1 inline-flex"
+                    className="font-body text-sm mt-2 inline-flex transition-colors duration-200"
+                    style={{ color: "var(--green)" }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = "var(--green-light)"}
+                    onMouseLeave={(e) => e.currentTarget.style.color = "var(--green)"}
                   >
                     {isExpanded ? "Read less" : "Read more"}
                   </span>
@@ -257,8 +318,11 @@ export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
               </div>
             </div>
             {isSelected && (
-              <span className="mt-4 inline-flex items-center gap-2 text-emerald-600 text-sm font-medium">
-                <span className="text-lg">✓</span>
+              <span 
+                className="mt-4 inline-flex items-center gap-2 font-body text-sm"
+                style={{ color: "var(--green)", fontWeight: 500 }}
+              >
+                <span className="text-base">✓</span>
                 Selected
               </span>
             )}

@@ -8,15 +8,20 @@ interface LinkBankButtonProps {
   size?: "default" | "large";
   variant?: "primary" | "secondary";
   onSuccess?: () => void;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 export function LinkBankButton({ 
   size = "default", 
   variant = "primary",
-  onSuccess 
+  onSuccess,
+  className,
+  style,
 }: LinkBankButtonProps) {
   const [isLinking, setIsLinking] = useState(false);
   const [shouldOpen, setShouldOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const { open, ready, loading } = usePlaidLink({
     onSuccess: async (publicToken, metadata) => {
@@ -61,30 +66,55 @@ export function LinkBankButton({
 
   const isLoading = loading || isLinking || (shouldOpen && !ready);
 
-  const baseStyles = "font-medium rounded-lg transition-colors disabled:opacity-50";
-  
-  const sizeStyles = {
-    default: "px-4 py-2 text-sm",
-    large: "px-6 py-3 text-base",
+  // Size configurations
+  const sizeConfig = {
+    default: { padding: "12px 24px", fontSize: "14px" },
+    large: { padding: "16px 48px", fontSize: "16px" },
   };
 
-  const variantStyles = {
-    primary: "bg-emerald-600 text-white hover:bg-emerald-700",
-    secondary: "bg-gray-100 text-gray-700 hover:bg-gray-200 border",
+  // Variant configurations using CSS variables
+  const getVariantStyles = (): React.CSSProperties => {
+    if (variant === "secondary") {
+      return {
+        backgroundColor: isHovered ? "rgba(162, 137, 108, 0.1)" : "transparent",
+        color: "var(--foreground)",
+        border: "1px solid var(--border)",
+      };
+    }
+    return {
+      backgroundColor: isHovered && !isLoading ? "var(--green-light)" : "var(--green)",
+      color: "var(--white)",
+      border: "none",
+    };
+  };
+
+  const baseStyles: React.CSSProperties = {
+    fontFamily: "var(--font-body), 'Roboto Serif', 'Times New Roman', Georgia, serif",
+    fontWeight: 500,
+    letterSpacing: "0.025em",
+    transition: "all 0.2s ease",
+    cursor: isLoading ? "wait" : "pointer",
+    opacity: isLoading ? 0.6 : 1,
+    ...sizeConfig[size],
+    ...getVariantStyles(),
+    ...style,
   };
 
   return (
     <button
       onClick={handleClick}
       disabled={isLoading}
-      className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]}`}
+      className={className}
+      style={baseStyles}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {isLoading ? (
         "Connecting..."
       ) : variant === "secondary" ? (
         "+ Link another account"
       ) : (
-        "Link Bank Account"
+        "Connect Bank Account"
       )}
     </button>
   );
