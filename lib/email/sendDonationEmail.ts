@@ -44,15 +44,15 @@ export async function sendDonationEmail({
   }
 
   const formattedAmount = amount.toFixed(2);
-  const subject = `Your round-up donation of $${formattedAmount}`;
-  const charityLine = charityName ? `to ${charityName}` : "";
+  const subject = `Congrats! You reached your goal`;
+  const charityLine = charityName ? `to ${charityName}` : "to your charity";
   const transactionLine = transactionId
     ? `Transaction ID: ${transactionId}`
     : "";
 
   const text = [
-    `Thanks for making change!`,
-    `We rounded up your purchase and donated $${formattedAmount} ${charityLine}.`,
+    `Congrats! You have reached your goal of $${formattedAmount} ${charityLine}.`,
+    `Thank you for making a real impact.`,
     transactionLine,
   ]
     .filter(Boolean)
@@ -60,11 +60,11 @@ export async function sendDonationEmail({
 
   const html = `
     <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #111;">
-      <h2 style="margin: 0 0 8px;">Thanks for making a change!</h2>
+      <h2 style="margin: 0 0 8px;">Congrats! You reached your goal </h2>
       <p style="margin: 0 0 12px;">
-        We rounded up your purchase and donated <strong>$${formattedAmount}</strong>
-        ${charityLine ? `to <strong>${charityName}</strong>.` : "."}
+        You have reached your goal of <strong>$${formattedAmount}</strong> ${charityLine}.
       </p>
+      <p style="margin: 0 0 12px;">Thank you for making a real impact.</p>
       ${transactionId ? `<p style="margin: 0; color: #666;">Transaction ID: ${transactionId}</p>` : ""}
     </div>
   `;

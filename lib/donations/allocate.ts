@@ -94,11 +94,12 @@ export async function allocateRoundupToCharity(
 
   let remaining = roundToCents(toNumber(roundupAmount));
   const allocations: { charityId: string; amount: number }[] = [];
+  const completedGoals: { charityId: string; goalAmount: number }[] = [];
 
   const updateCharity = async (
     charity: UserCharity,
     addAmount: number
-  ): Promise<{ newCurrent: number; isCompleted: boolean }> => {
+  ): Promise<{ newCurrent: number; isCompleted: boolean; goalAmount: number }> => {
     const goal = Math.max(0, roundToCents(toNumber(charity.goal_amount)));
     const current = Math.max(0, roundToCents(toNumber(charity.current_amount)));
 
@@ -120,7 +121,7 @@ export async function allocateRoundupToCharity(
       throw new Error("Failed to update charity amount");
     }
 
-    return { newCurrent: cappedCurrent, isCompleted };
+    return { newCurrent: cappedCurrent, isCompleted, goalAmount: goal };
   };
 
   // Allocate without overfilling goals:
@@ -136,10 +137,13 @@ export async function allocateRoundupToCharity(
       if (needed <= 0) continue;
 
       const allocateAmount = Math.min(remaining, needed);
-      await updateCharity(charity, allocateAmount);
+      const { isCompleted, goalAmount } = await updateCharity(charity, allocateAmount);
 
       allocations.push({ charityId: charity.charity_id, amount: allocateAmount });
       remaining = roundToCents(remaining - allocateAmount);
+      if (isCompleted) {
+        completedGoals.push({ charityId: charity.charity_id, goalAmount });
+      }
     }
   } else {
     const available = [...userCharities];
@@ -156,12 +160,13 @@ export async function allocateRoundupToCharity(
       }
 
       const allocateAmount = Math.min(remaining, needed);
-      const { isCompleted } = await updateCharity(charity, allocateAmount);
+      const { isCompleted, goalAmount } = await updateCharity(charity, allocateAmount);
 
       allocations.push({ charityId: charity.charity_id, amount: allocateAmount });
       remaining = roundToCents(remaining - allocateAmount);
 
       if (isCompleted) {
+        completedGoals.push({ charityId: charity.charity_id, goalAmount });
         available.splice(randomIndex, 1);
       }
     }
@@ -200,35 +205,43 @@ export async function allocateRoundupToCharity(
     console.error("[allocateRoundupToCharity] Failed to mark transaction as processed:", markError);
   }
 
-  try {
-    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("email")
-      .eq("id", userId)
-      .single();
+  if (completedGoals.length > 0) {
+    try {
+      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("email")
+        .eq("id", userId)
+        .single();
 
-    const { data: charity } = await supabaseAdmin
-      .from("user_charities")
-      .select("charity_name")
-      .eq("user_id", userId)
-      .eq("charity_id", allocations[0].charityId)
-      .maybeSingle();
+      const completedIds = completedGoals.map((goal) => goal.charityId);
+      const { data: charities } = await supabaseAdmin
+        .from("user_charities")
+        .select("charity_id, charity_name")
+        .eq("user_id", userId)
+        .in("charity_id", completedIds);
 
-    const email = authUser?.user?.email || profile?.email || undefined;
-    if (email) {
-      await sendDonationEmail({
-        to: email,
-        amount: roundToCents(toNumber(roundupAmount)),
-        charityName: charity?.charity_name || undefined,
-        transactionId,
-      });
-      console.log("[allocateRoundupToCharity] Donation email sent");
-    } else {
-      console.warn("[allocateRoundupToCharity] No email found for user");
+      const nameById = new Map(
+        (charities || []).map((charity) => [charity.charity_id, charity.charity_name])
+      );
+
+      const email = authUser?.user?.email || profile?.email || undefined;
+      if (email) {
+        for (const completedGoal of completedGoals) {
+          await sendDonationEmail({
+            to: email,
+            amount: roundToCents(toNumber(completedGoal.goalAmount)),
+            charityName: nameById.get(completedGoal.charityId) || undefined,
+            transactionId,
+          });
+        }
+        console.log("[allocateRoundupToCharity] Goal completion email(s) sent");
+      } else {
+        console.warn("[allocateRoundupToCharity] No email found for user");
+      }
+    } catch (error) {
+      console.error("Failed to send goal completion email:", error);
     }
-  } catch (error) {
-    console.error("Failed to send donation email:", error);
   }
 
   // In priority mode, keep selected_charity_id pointing at the highest-priority active charity.
