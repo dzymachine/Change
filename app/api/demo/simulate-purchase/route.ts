@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Only allocate the round-up if round-ups are enabled
-    let allocation = { success: false, charityId: undefined as string | undefined };
+    let allocation: { success: boolean; charityId?: string } = { success: false };
     let charityName = null;
 
     if (roundupEnabled) {
