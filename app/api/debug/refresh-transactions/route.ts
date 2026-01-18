@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { plaidClient } from "@/lib/plaid/client";
+import { isDebugAuthorized } from "@/lib/debug-auth";
 
 /**
  * DEBUG ONLY - Trigger Plaid sandbox transaction refresh
@@ -14,11 +15,8 @@ import { plaidClient } from "@/lib/plaid/client";
  * This is the best way to test the full round-up flow in sandbox.
  */
 export async function POST(request: NextRequest) {
-  if (process.env.NODE_ENV !== "development") {
-    return NextResponse.json(
-      { error: "Not available in production" },
-      { status: 403 }
-    );
+  if (!isDebugAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
@@ -106,12 +104,9 @@ export async function POST(request: NextRequest) {
 }
 
 // GET endpoint to show usage
-export async function GET() {
-  if (process.env.NODE_ENV !== "development") {
-    return NextResponse.json(
-      { error: "Not available in production" },
-      { status: 403 }
-    );
+export async function GET(request: NextRequest) {
+  if (!isDebugAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   // List available linked accounts

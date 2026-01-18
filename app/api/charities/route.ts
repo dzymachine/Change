@@ -100,7 +100,7 @@ export async function GET() {
   const supabase = await createClient();
   const { data: charities, error } = await supabase
     .from("charities")
-    .select("id, name, description, logo, logo_url, category")
+    .select("id, name, description, logo, logo_url, category, website_url")
     .eq("is_active", true)
     .order("name");
 

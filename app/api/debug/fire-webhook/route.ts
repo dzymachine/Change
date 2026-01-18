@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { plaidClient } from "@/lib/plaid/client";
 import { SandboxItemFireWebhookRequestWebhookCodeEnum } from "plaid";
+import { isDebugAuthorized } from "@/lib/debug-auth";
 
 /**
  * DEBUG ONLY - Fire a Plaid sandbox webhook
@@ -10,11 +11,8 @@ import { SandboxItemFireWebhookRequestWebhookCodeEnum } from "plaid";
  * Useful for testing the webhook → sync → allocation flow
  */
 export async function POST(request: NextRequest) {
-  if (process.env.NODE_ENV !== "development") {
-    return NextResponse.json(
-      { error: "Not available in production" },
-      { status: 403 }
-    );
+  if (!isDebugAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
@@ -98,10 +96,7 @@ export async function POST(request: NextRequest) {
 // GET endpoint to show available webhook codes
 export async function GET() {
   if (process.env.NODE_ENV !== "development") {
-    return NextResponse.json(
-      { error: "Not available in production" },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   // List all available linked accounts for easy testing

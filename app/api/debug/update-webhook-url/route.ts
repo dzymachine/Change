@@ -1,17 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { plaidClient } from "@/lib/plaid/client";
+import { isDebugAuthorized } from "@/lib/debug-auth";
 
 /**
  * DEBUG ONLY - Update webhook URL for existing Plaid Items
  * Use this if you linked an account before the webhook URL was configured correctly
  */
-export async function POST() {
-  if (process.env.NODE_ENV !== "development") {
-    return NextResponse.json(
-      { error: "Not available in production" },
-      { status: 403 }
-    );
+export async function POST(request: NextRequest) {
+  if (!isDebugAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const webhookUrl = process.env.PLAID_WEBHOOK_URL;
@@ -90,12 +88,9 @@ export async function POST() {
   }
 }
 
-export async function GET() {
-  if (process.env.NODE_ENV !== "development") {
-    return NextResponse.json(
-      { error: "Not available in production" },
-      { status: 403 }
-    );
+export async function GET(request: NextRequest) {
+  if (!isDebugAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   return NextResponse.json({

@@ -1,16 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { plaidClient } from "@/lib/plaid/client";
+import { isDebugAuthorized } from "@/lib/debug-auth";
 
 /**
  * DEBUG ONLY - Check Plaid Item details including webhook URL
  */
-export async function GET() {
-  if (process.env.NODE_ENV !== "development") {
-    return NextResponse.json(
-      { error: "Not available in production" },
-      { status: 403 }
-    );
+export async function GET(request: NextRequest) {
+  if (!isDebugAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
