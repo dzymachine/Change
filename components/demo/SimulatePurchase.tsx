@@ -29,6 +29,7 @@ export function SimulatePurchase() {
   const [step, setStep] = useState<DemoStep>("idle");
   const [result, setResult] = useState<PurchaseResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const isCompleteStep = step === "complete";
 
   const simulatePurchase = async () => {
     setError(null);
@@ -115,7 +116,7 @@ export function SimulatePurchase() {
           <ProcessingStep
             label="Calculating round-up & donating..."
             isActive={step === "donating"}
-            isComplete={step === "complete"}
+            isComplete={isCompleteStep}
             icon="💚"
           />
         </div>
