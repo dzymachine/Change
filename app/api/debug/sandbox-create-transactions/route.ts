@@ -5,6 +5,17 @@ import { isDebugAuthorized } from "@/lib/debug-auth";
 import { syncTransactionsForItem } from "@/lib/plaid/sync";
 import { SandboxItemFireWebhookRequestWebhookCodeEnum } from "plaid";
 
+async function readJsonBody(request: NextRequest): Promise<Record<string, unknown>> {
+  try {
+    const text = await request.text();
+    if (!text) return {};
+    const parsed = JSON.parse(text);
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -43,24 +54,62 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const body = await request.json().catch(() => ({} as Record<string, unknown>));
-  const itemId = typeof body.item_id === "string" ? body.item_id : undefined;
-  const userId = typeof body.user_id === "string" ? body.user_id : undefined;
-  const count =
-    typeof body.count === "number" && Number.isFinite(body.count) && body.count > 0
-      ? Math.min(25, Math.floor(body.count))
-      : 3;
-  const amount =
-    typeof body.amount === "number" && Number.isFinite(body.amount) && body.amount > 0
-      ? body.amount
-      : undefined;
-  const description =
-    typeof body.description === "string" && body.description.trim().length > 0
-      ? body.description.trim()
-      : undefined;
+  try {
+    const url = new URL(request.url);
+    const body = await readJsonBody(request);
 
-  const fireWebhook = body.fire_webhook === undefined ? true : Boolean(body.fire_webhook);
-  const syncNow = body.sync_now === undefined ? true : Boolean(body.sync_now);
+    const queryItemId = url.searchParams.get("item_id");
+    const queryUserId = url.searchParams.get("user_id");
+    const queryCount = url.searchParams.get("count");
+    const queryAmount = url.searchParams.get("amount");
+    const queryDescription = url.searchParams.get("description");
+    const queryFireWebhook = url.searchParams.get("fire_webhook");
+    const querySyncNow = url.searchParams.get("sync_now");
+
+    const itemId =
+      typeof queryItemId === "string" && queryItemId.length > 0
+        ? queryItemId
+        : typeof body.item_id === "string"
+          ? body.item_id
+          : undefined;
+    const userId =
+      typeof queryUserId === "string" && queryUserId.length > 0
+        ? queryUserId
+        : typeof body.user_id === "string"
+          ? body.user_id
+          : undefined;
+
+  const count =
+    typeof queryCount === "string" && queryCount.length > 0
+      ? Math.min(25, Number.parseInt(queryCount, 10) || 3)
+      : typeof body.count === "number" && Number.isFinite(body.count) && body.count > 0
+        ? Math.min(25, Math.floor(body.count))
+        : 3;
+  const amount =
+    typeof queryAmount === "string" && queryAmount.length > 0
+      ? Number.parseFloat(queryAmount)
+      : typeof body.amount === "number" && Number.isFinite(body.amount) && body.amount > 0
+        ? body.amount
+        : undefined;
+  const description =
+    typeof queryDescription === "string" && queryDescription.trim().length > 0
+      ? queryDescription.trim()
+      : typeof body.description === "string" && body.description.trim().length > 0
+        ? body.description.trim()
+        : undefined;
+
+  const fireWebhook =
+    queryFireWebhook === null
+      ? body.fire_webhook === undefined
+        ? true
+        : Boolean(body.fire_webhook)
+      : queryFireWebhook !== "false";
+  const syncNow =
+    querySyncNow === null
+      ? body.sync_now === undefined
+        ? true
+        : Boolean(body.sync_now)
+      : querySyncNow !== "false";
 
   let query = supabaseAdmin
     .from("linked_accounts")
@@ -74,11 +123,15 @@ export async function POST(request: NextRequest) {
   const { data: linkedAccount, error: fetchError } = await query
     .order("created_at", { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   if (fetchError || !linkedAccount) {
     return NextResponse.json(
-      { error: "No linked Plaid account found", details: fetchError?.message },
+      {
+        error: "No linked Plaid account found",
+        details: fetchError?.message,
+        requested: { item_id: itemId ?? null, user_id: userId ?? null },
+      },
       { status: 404 }
     );
   }
@@ -124,6 +177,15 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     success: true,
+    requested: {
+      item_id: itemId ?? null,
+      user_id: userId ?? null,
+      count,
+      amount: amount ?? null,
+      description: description ?? null,
+      fire_webhook: fireWebhook,
+      sync_now: syncNow,
+    },
     item_id: linkedAccount.plaid_item_id,
     institution: linkedAccount.institution_name,
     created_count: transactions.length,
@@ -132,5 +194,15 @@ export async function POST(request: NextRequest) {
     sync: syncNow ? { ran: true } : { ran: false },
     latest_plaid_transactions: latest || [],
   });
+  } catch (error) {
+    const plaidError = (error as { response?: { data?: unknown } })?.response?.data;
+    return NextResponse.json(
+      {
+        error: "Failed to create sandbox transactions",
+        details: plaidError || (error instanceof Error ? error.message : String(error)),
+      },
+      { status: 500 }
+    );
+  }
 }
 
