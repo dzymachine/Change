@@ -17,7 +17,7 @@ export function TopNav() {
 
   return (
     <header 
-      className="flex items-center justify-between px-8 py-5"
+      className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-5"
       style={{ 
         backgroundColor: "var(--background)",
         borderBottom: "1px solid var(--border)",
@@ -33,6 +33,7 @@ export function TopNav() {
           alt="Change"
           width={120}
           height={32}
+          className="h-7 w-auto sm:h-8"
           priority
         />
       </Link>
@@ -41,7 +42,7 @@ export function TopNav() {
         <Link
           href="/dashboard"
           prefetch={false}
-          className="p-2.5 transition-all duration-200"
+          className="p-2 sm:p-2.5 transition-all duration-200"
           style={getLinkStyle("/dashboard")}
           title="Dashboard"
         >
@@ -62,7 +63,7 @@ export function TopNav() {
         <Link
           href="/profile"
           prefetch={false}
-          className="p-2.5 transition-all duration-200"
+          className="p-2 sm:p-2.5 transition-all duration-200"
           style={getLinkStyle("/profile")}
           title="Profile"
         >
@@ -83,7 +84,7 @@ export function TopNav() {
         <Link
           href="/settings"
           prefetch={false}
-          className="p-2.5 transition-all duration-200"
+          className="p-2 sm:p-2.5 transition-all duration-200"
           style={getLinkStyle("/settings")}
           title="Settings"
         >

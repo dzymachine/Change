@@ -33,6 +33,7 @@ export function LinkBankButton({
       });
 
       setIsLinking(false);
+      setShouldOpen(false);
 
       if (result.success) {
         onSuccess?.();
@@ -50,7 +51,6 @@ export function LinkBankButton({
   useEffect(() => {
     if (shouldOpen && ready) {
       open();
-      setShouldOpen(false);
     }
   }, [shouldOpen, ready, open]);
 
@@ -64,7 +64,7 @@ export function LinkBankButton({
     }
   };
 
-  const isLoading = loading || isLinking || (shouldOpen && !ready);
+  const isLoading = loading || isLinking || shouldOpen;
 
   // Size configurations
   const sizeConfig = {

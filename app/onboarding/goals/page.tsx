@@ -182,7 +182,7 @@ export default function OnboardingGoalsPage() {
           sessionStorage.removeItem("onboarding_charities");
           console.log("[Goals] Navigating to plaid page...");
           // Use full page navigation to ensure cookies from server action are properly handled
-          window.location.href = "/onboarding/plaid";
+          window.location.href = "/onboarding/plaid?steps=3";
         } catch (err) {
           console.error("[Goals] Error saving goals:", err);
           setIsSaving(false);

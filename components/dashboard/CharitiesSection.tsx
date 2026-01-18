@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CharityCard } from "./CharityCard";
 import { AddCharityModal } from "./AddCharityModal";
@@ -59,11 +59,39 @@ export function CharitiesSection({
   const router = useRouter();
   const [mode, setMode] = useState(initialMode);
   const [charities, setCharities] = useState(initialCharities);
+  const charitiesRef = useRef(charities);
+  const [isCoarsePointer, setIsCoarsePointer] = useState(false);
 
   // Sync charities state when props change (e.g., after router.refresh())
   useEffect(() => {
     setCharities(initialCharities);
   }, [initialCharities]);
+
+  useEffect(() => {
+    charitiesRef.current = charities;
+  }, [charities]);
+
+  useEffect(() => {
+    const update = () => {
+      const coarseMatch =
+        typeof window !== "undefined" &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(pointer: coarse)").matches;
+      setIsCoarsePointer(coarseMatch || (navigator?.maxTouchPoints ?? 0) > 0);
+    };
+
+    update();
+
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mql = window.matchMedia("(pointer: coarse)");
+    mql.addEventListener?.("change", update);
+    return () => {
+      mql.removeEventListener?.("change", update);
+    };
+  }, []);
 
   // Sync mode state when props change
   useEffect(() => {
@@ -71,9 +99,14 @@ export function CharitiesSection({
   }, [initialMode]);
   const [urlMap, setUrlMap] = useState<Record<string, string>>({});
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const draggedIndexRef = useRef<number | null>(draggedIndex);
   const [isPending, startTransition] = useTransition();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+
+  useEffect(() => {
+    draggedIndexRef.current = draggedIndex;
+  }, [draggedIndex]);
 
   // Simulate purchase state
   const [showSimulateModal, setShowSimulateModal] = useState(false);
@@ -86,6 +119,9 @@ export function CharitiesSection({
   const completedCharities = charities.filter((c) => c.isCompleted);
   const displayedCharities = showCompleted ? completedCharities : activeCharities;
 
+  const canReorderPriority =
+    mode === "priority" && !showCompleted && activeCharities.length > 1;
+
   const handleModeChange = (newMode: "random" | "priority") => {
     setMode(newMode);
     startTransition(async () => {
@@ -93,36 +129,54 @@ export function CharitiesSection({
     });
   };
 
+  const reorderActiveCharities = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+
+    setCharities((prev) => {
+      const activeList = prev.filter((c) => !c.isCompleted);
+      const completedList = prev.filter((c) => c.isCompleted);
+
+      if (
+        fromIndex < 0 ||
+        toIndex < 0 ||
+        fromIndex >= activeList.length ||
+        toIndex >= activeList.length
+      ) {
+        return prev;
+      }
+
+      const nextActive = [...activeList];
+      const [draggedItem] = nextActive.splice(fromIndex, 1);
+      if (!draggedItem) return prev;
+
+      nextActive.splice(toIndex, 0, draggedItem);
+
+      const prioritized = nextActive.map((c, i) => ({
+        ...c,
+        priority: i + 1,
+      }));
+
+      return [...prioritized, ...completedList];
+    });
+  };
+
   const handleDragStart = (index: number) => {
-    if (mode !== "priority") return;
+    if (!canReorderPriority) return;
     setDraggedIndex(index);
   };
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    if (mode !== "priority" || draggedIndex === null || draggedIndex === index)
-      return;
+    if (!canReorderPriority || draggedIndex === null || draggedIndex === index) return;
 
-    const activeList = charities.filter((c) => !c.isCompleted);
-    const completedList = charities.filter((c) => c.isCompleted);
-
-    const newActive = [...activeList];
-    const draggedItem = newActive[draggedIndex];
-    newActive.splice(draggedIndex, 1);
-    newActive.splice(index, 0, draggedItem);
-
-    newActive.forEach((c, i) => {
-      c.priority = i + 1;
-    });
-
-    setCharities([...newActive, ...completedList]);
+    reorderActiveCharities(draggedIndex, index);
     setDraggedIndex(index);
   };
 
   const handleDragEnd = () => {
     if (draggedIndex === null) return;
 
-    const priorities = charities
+    const priorities = charitiesRef.current
       .filter((c) => !c.isCompleted)
       .map((c) => ({
         charityId: c.charityId,
@@ -134,6 +188,135 @@ export function CharitiesSection({
     });
 
     setDraggedIndex(null);
+  };
+
+  const pointerDragRef = useRef<{
+    pointerId: number | null;
+    element: HTMLElement | null;
+    pressTimer: number | null;
+    pressStartX: number;
+    pressStartY: number;
+    dragging: boolean;
+  }>({
+    pointerId: null,
+    element: null,
+    pressTimer: null,
+    pressStartX: 0,
+    pressStartY: 0,
+    dragging: false,
+  });
+
+  const removePointerListeners = () => {
+    window.removeEventListener("pointermove", onWindowPointerMove, true);
+    window.removeEventListener("pointerup", onWindowPointerUp, true);
+    window.removeEventListener("pointercancel", onWindowPointerUp, true);
+  };
+
+  const cleanupPointerDrag = (commit: boolean) => {
+    const state = pointerDragRef.current;
+
+    if (state.pressTimer !== null) {
+      window.clearTimeout(state.pressTimer);
+      state.pressTimer = null;
+    }
+
+    if (state.pointerId !== null) {
+      try {
+        state.element?.releasePointerCapture(state.pointerId);
+      } catch {
+        // Ignore release failures
+      }
+    }
+
+    removePointerListeners();
+
+    state.pointerId = null;
+    state.element = null;
+    state.dragging = false;
+
+    if (commit) {
+      handleDragEnd();
+    } else {
+      setDraggedIndex(null);
+    }
+  };
+
+  const startPointerDrag = (index: number, pointerId: number, element: HTMLElement) => {
+    if (!canReorderPriority) return;
+
+    const state = pointerDragRef.current;
+    state.dragging = true;
+    setDraggedIndex(index);
+
+    try {
+      element.setPointerCapture(pointerId);
+    } catch {
+      // Ignore capture failures
+    }
+  };
+
+  function onWindowPointerMove(e: PointerEvent) {
+    const state = pointerDragRef.current;
+    if (state.pointerId === null || e.pointerId !== state.pointerId) return;
+
+    if (!state.dragging) {
+      const dx = e.clientX - state.pressStartX;
+      const dy = e.clientY - state.pressStartY;
+      const movedEnough = dx * dx + dy * dy > 10 * 10;
+      if (movedEnough) {
+        cleanupPointerDrag(false);
+      }
+      return;
+    }
+
+    e.preventDefault();
+
+    const fromIndex = draggedIndexRef.current;
+    if (fromIndex === null) return;
+
+    const target = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+    const item = target?.closest("[data-charity-dnd-index]") as HTMLElement | null;
+    if (!item) return;
+
+    const toIndex = Number(item.dataset.charityDndIndex);
+    if (!Number.isFinite(toIndex) || toIndex === fromIndex) return;
+
+    reorderActiveCharities(fromIndex, toIndex);
+    setDraggedIndex(toIndex);
+  }
+
+  function onWindowPointerUp(e: PointerEvent) {
+    const state = pointerDragRef.current;
+    if (state.pointerId === null || e.pointerId !== state.pointerId) return;
+    cleanupPointerDrag(state.dragging);
+  }
+
+  const handlePointerDown = (index: number, e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isCoarsePointer || !canReorderPriority) return;
+    if (e.pointerType === "mouse") return;
+
+    const state = pointerDragRef.current;
+    state.pointerId = e.pointerId;
+    state.element = e.currentTarget;
+    state.pressStartX = e.clientX;
+    state.pressStartY = e.clientY;
+    state.dragging = false;
+
+    if (state.pressTimer !== null) {
+      window.clearTimeout(state.pressTimer);
+    }
+
+    state.pressTimer = window.setTimeout(() => {
+      if (state.pointerId === null || state.element === null) return;
+      startPointerDrag(index, state.pointerId, state.element);
+    }, 150);
+
+    window.addEventListener("pointermove", onWindowPointerMove, {
+      passive: false,
+      capture: true,
+    });
+    window.addEventListener("pointerup", onWindowPointerUp, { capture: true });
+    window.addEventListener("pointercancel", onWindowPointerUp, { capture: true });
   };
 
   const handleAddCharities = async (
@@ -262,9 +445,9 @@ export function CharitiesSection({
   }, []);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 
             className="font-body text-2xl mb-1"
@@ -280,11 +463,11 @@ export function CharitiesSection({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto">
           {/* Simulate Purchase button */}
           <button
             onClick={() => setShowSimulateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 font-body text-sm transition-all duration-200"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 font-body text-xs sm:text-sm transition-all duration-200"
             style={{
               backgroundColor: "transparent",
               border: "1px solid var(--border)",
@@ -302,7 +485,7 @@ export function CharitiesSection({
           >
             <button
               onClick={() => setShowCompleted(false)}
-              className="px-4 py-1.5 font-body text-sm transition-all duration-200"
+              className="px-3 sm:px-4 py-1.5 font-body text-xs sm:text-sm transition-all duration-200"
               style={{
                 backgroundColor: !showCompleted ? "var(--white)" : "transparent",
                 color: !showCompleted ? "var(--foreground)" : "var(--muted)",
@@ -315,7 +498,7 @@ export function CharitiesSection({
             </button>
             <button
               onClick={() => setShowCompleted(true)}
-              className="px-4 py-1.5 font-body text-sm transition-all duration-200"
+              className="px-3 sm:px-4 py-1.5 font-body text-xs sm:text-sm transition-all duration-200"
               style={{
                 backgroundColor: showCompleted ? "var(--white)" : "transparent",
                 color: showCompleted ? "var(--foreground)" : "var(--muted)",
@@ -332,7 +515,7 @@ export function CharitiesSection({
           <button
             onClick={() => handleModeChange("random")}
             disabled={isPending}
-            className="flex items-center gap-2 px-4 py-2 font-body text-sm transition-all duration-200"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 font-body text-xs sm:text-sm transition-all duration-200"
             style={{
               backgroundColor: mode === "random" ? "var(--green)" : "transparent",
               border: mode === "random" ? "1px solid var(--green)" : "1px solid var(--border)",
@@ -356,7 +539,7 @@ export function CharitiesSection({
           <button
             onClick={() => handleModeChange("priority")}
             disabled={isPending}
-            className="flex items-center gap-2 px-4 py-2 font-body text-sm transition-all duration-200"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 font-body text-xs sm:text-sm transition-all duration-200"
             style={{
               backgroundColor: mode === "priority" ? "var(--green)" : "transparent",
               border: mode === "priority" ? "1px solid var(--green)" : "1px solid var(--border)",
@@ -388,37 +571,51 @@ export function CharitiesSection({
           No charities selected yet. Add up to {maxCharities} to start tracking your goals.
         </div>
       )}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 transition-all duration-300">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 transition-all duration-300">
         {displayedCharities.map((charity, index) => (
-          <CharityCard
+          <div
             key={charity.id}
-            id={charity.id}
-            name={charity.name}
-            logo={charity.logo}
-            imageUrl={charity.imageUrl}
-            charityUrl={urlMap[charity.charityId]}
-            category={charity.category}
-            goalAmount={charity.goalAmount}
-            currentAmount={charity.currentAmount}
-            priority={charity.priority}
-            isCompleted={charity.isCompleted}
-            donationMode={mode}
-            onGoalChange={handleGoalChange}
-            onRemove={showCompleted ? undefined : handleRemoveCharity}
-            draggable={mode === "priority" && !showCompleted && activeCharities.length > 1}
-            onDragStart={() => handleDragStart(index)}
-            onDragOver={(e) => handleDragOver(e, index)}
-            onDragEnd={handleDragEnd}
-            isDragging={draggedIndex === index}
-            compact
-          />
+            data-charity-dnd-index={index}
+            onPointerDown={
+              isCoarsePointer && canReorderPriority
+                ? (e) => handlePointerDown(index, e)
+                : undefined
+            }
+            style={
+              isCoarsePointer && draggedIndex === index
+                ? { touchAction: "none" }
+                : undefined
+            }
+          >
+            <CharityCard
+              id={charity.id}
+              name={charity.name}
+              logo={charity.logo}
+              imageUrl={charity.imageUrl}
+              charityUrl={urlMap[charity.charityId]}
+              category={charity.category}
+              goalAmount={charity.goalAmount}
+              currentAmount={charity.currentAmount}
+              priority={charity.priority}
+              isCompleted={charity.isCompleted}
+              donationMode={mode}
+              onGoalChange={handleGoalChange}
+              onRemove={showCompleted ? undefined : handleRemoveCharity}
+              draggable={!isCoarsePointer && canReorderPriority}
+              onDragStart={!isCoarsePointer ? () => handleDragStart(index) : undefined}
+              onDragOver={!isCoarsePointer ? (e) => handleDragOver(e, index) : undefined}
+              onDragEnd={!isCoarsePointer ? handleDragEnd : undefined}
+              isDragging={draggedIndex === index}
+              compact
+            />
+          </div>
         ))}
 
         {/* Add charity card - only show in active view when under max */}
         {!showCompleted && activeCharities.length < maxCharities && (
           <button
             onClick={() => setShowAddModal(true)}
-            className="p-4 flex flex-col items-center justify-center gap-3 transition-all duration-200 min-h-[200px] group"
+            className="p-4 flex flex-col items-center justify-center gap-3 transition-all duration-200 min-h-[180px] sm:min-h-[200px] group"
             style={{
               border: "2px dashed var(--border)",
               backgroundColor: "transparent",
@@ -459,7 +656,7 @@ export function CharitiesSection({
         {/* Empty placeholder cards to fill the row */}
         {!showCompleted && activeCharities.length < maxCharities - 1 && 
           Array.from({ length: Math.max(0, 4 - activeCharities.length) }).map((_, i) => (
-            <div key={`empty-${i}`} className="min-h-[180px]" style={{ border: "1px solid transparent" }} />
+            <div key={`empty-${i}`} className="hidden lg:block min-h-[180px]" style={{ border: "1px solid transparent" }} />
           ))
         }
       </div>
@@ -469,7 +666,7 @@ export function CharitiesSection({
           className="font-mono text-xs text-center mt-4"
           style={{ color: "var(--muted)" }}
         >
-          Drag to reorder priorities
+          Drag (or long-press on mobile) to reorder priorities
         </p>
       )}
 
@@ -489,7 +686,7 @@ export function CharitiesSection({
             onClick={() => !isSimulating && setShowSimulateModal(false)}
           />
           <div 
-            className="relative w-full max-w-sm mx-4 p-8"
+            className="relative w-full max-w-sm mx-4 p-5 sm:p-8"
             style={{
               backgroundColor: "var(--white)",
               border: "1px solid var(--border)",

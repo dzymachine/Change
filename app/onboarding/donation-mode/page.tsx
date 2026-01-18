@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Charity } from "@/components/onboarding/CharityPicker";
 import { saveDonationMode } from "@/actions/donations";
@@ -11,13 +11,50 @@ interface CharityWithGoal {
   priority: number;
 }
 
+const isCharityLike = (value: unknown): value is Charity =>
+  Boolean(value && typeof value === "object" && "id" in value && "name" in value);
+
 export default function OnboardingDonationModePage() {
   const router = useRouter();
   const [mode, setMode] = useState<"random" | "priority" | null>(null);
-  const [charities, setCharities] = useState<CharityWithGoal[]>([]);
+  const [charities, setCharities] = useState<CharityWithGoal[]>(() => {
+    if (typeof window === "undefined") return [];
+
+    try {
+      const storedCharities = sessionStorage.getItem("onboarding_charities");
+      const storedGoals = sessionStorage.getItem("onboarding_goals");
+      if (!storedCharities || !storedGoals) return [];
+
+      const parsedCharities: unknown = JSON.parse(storedCharities);
+      const goals: { charityId: string; goalAmount: number }[] = JSON.parse(storedGoals);
+
+      if (!Array.isArray(parsedCharities)) return [];
+
+      const charitiesFromStorage = parsedCharities.filter(isCharityLike);
+      if (charitiesFromStorage.length === 0) return [];
+
+      const ids = charitiesFromStorage.map((charity) => charity.id);
+      return ids
+        .map((id, index) => {
+          const charity = charitiesFromStorage.find((c) => c.id === id);
+          const goal = goals.find((g) => g.charityId === id);
+          if (!charity || !goal) return null;
+          return {
+            charity,
+            goalAmount: goal.goalAmount,
+            priority: index + 1,
+          };
+        })
+        .filter((c): c is CharityWithGoal => c !== null);
+    } catch {
+      return [];
+    }
+  });
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCoarsePointer, setIsCoarsePointer] = useState(false);
+  const draggedIndexRef = useRef<number | null>(draggedIndex);
 
   // Load charities from sessionStorage
   useEffect(() => {
@@ -43,14 +80,6 @@ export default function OnboardingDonationModePage() {
       router.push("/onboarding/charities");
       return cleanup;
     }
-
-    const isCharity = (value: unknown): value is Charity =>
-      Boolean(
-        value &&
-          typeof value === "object" &&
-          "id" in value &&
-          "name" in value
-      );
 
     const buildCharities = (ids: string[], list: Charity[]) =>
       ids
@@ -96,7 +125,7 @@ export default function OnboardingDonationModePage() {
     ) {
       const ids = parsedCharities;
       if (ids.length <= 1) {
-        router.push("/onboarding/plaid");
+        router.push("/onboarding/plaid?steps=3");
         return cleanup;
       }
       loadFromIds(ids);
@@ -104,9 +133,9 @@ export default function OnboardingDonationModePage() {
     }
 
     if (Array.isArray(parsedCharities)) {
-      const charities = parsedCharities.filter(isCharity);
+      const charities = parsedCharities.filter(isCharityLike);
       if (charities.length <= 1) {
-        router.push("/onboarding/plaid");
+        router.push("/onboarding/plaid?steps=3");
         return cleanup;
       }
       const ids = charities.map((charity) => charity.id);
@@ -115,13 +144,59 @@ export default function OnboardingDonationModePage() {
         router.push("/onboarding/charities");
         return cleanup;
       }
-      setCharities(charitiesWithGoals);
       return cleanup;
     }
 
     router.push("/onboarding/charities");
     return cleanup;
   }, [router]);
+
+  useEffect(() => {
+    draggedIndexRef.current = draggedIndex;
+  }, [draggedIndex]);
+
+  useEffect(() => {
+    const update = () => {
+      const coarseMatch =
+        typeof window !== "undefined" &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(pointer: coarse)").matches;
+      setIsCoarsePointer(coarseMatch || (navigator?.maxTouchPoints ?? 0) > 0);
+    };
+
+    update();
+
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mql = window.matchMedia("(pointer: coarse)");
+    mql.addEventListener?.("change", update);
+    return () => {
+      mql.removeEventListener?.("change", update);
+    };
+  }, []);
+
+  const reorderCharities = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+
+    setCharities((prev) => {
+      if (
+        fromIndex < 0 ||
+        toIndex < 0 ||
+        fromIndex >= prev.length ||
+        toIndex >= prev.length
+      ) {
+        return prev;
+      }
+
+      const next = [...prev];
+      const [draggedItem] = next.splice(fromIndex, 1);
+      if (!draggedItem) return prev;
+      next.splice(toIndex, 0, draggedItem);
+      return next.map((item, i) => ({ ...item, priority: i + 1 }));
+    });
+  };
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
@@ -131,22 +206,138 @@ export default function OnboardingDonationModePage() {
     e.preventDefault();
     if (draggedIndex === null || draggedIndex === index) return;
 
-    const newCharities = [...charities];
-    const draggedItem = newCharities[draggedIndex];
-    newCharities.splice(draggedIndex, 1);
-    newCharities.splice(index, 0, draggedItem);
-
-    // Update priorities
-    newCharities.forEach((c, i) => {
-      c.priority = i + 1;
-    });
-
-    setCharities(newCharities);
+    reorderCharities(draggedIndex, index);
     setDraggedIndex(index);
   };
 
   const handleDragEnd = () => {
     setDraggedIndex(null);
+  };
+
+  const canReorderPriority = mode === "priority" && charities.length > 1;
+
+  const pointerDragRef = useRef<{
+    pointerId: number | null;
+    element: HTMLElement | null;
+    pressTimer: number | null;
+    pressStartX: number;
+    pressStartY: number;
+    dragging: boolean;
+  }>({
+    pointerId: null,
+    element: null,
+    pressTimer: null,
+    pressStartX: 0,
+    pressStartY: 0,
+    dragging: false,
+  });
+
+  const cleanupPointerDrag = (commit: boolean) => {
+    const state = pointerDragRef.current;
+
+    if (state.pressTimer !== null) {
+      window.clearTimeout(state.pressTimer);
+      state.pressTimer = null;
+    }
+
+    if (state.pointerId !== null) {
+      try {
+        state.element?.releasePointerCapture(state.pointerId);
+      } catch {
+        // Ignore release failures
+      }
+    }
+
+    window.removeEventListener("pointermove", onWindowPointerMove, true);
+    window.removeEventListener("pointerup", onWindowPointerUp, true);
+    window.removeEventListener("pointercancel", onWindowPointerUp, true);
+
+    state.pointerId = null;
+    state.element = null;
+    state.dragging = false;
+
+    if (commit) {
+      handleDragEnd();
+    } else {
+      setDraggedIndex(null);
+    }
+  };
+
+  const startPointerDrag = (index: number, pointerId: number, element: HTMLElement) => {
+    if (!canReorderPriority) return;
+    const state = pointerDragRef.current;
+    state.dragging = true;
+    setDraggedIndex(index);
+
+    try {
+      element.setPointerCapture(pointerId);
+    } catch {
+      // Ignore capture failures
+    }
+  };
+
+  function onWindowPointerMove(e: PointerEvent) {
+    const state = pointerDragRef.current;
+    if (state.pointerId === null || e.pointerId !== state.pointerId) return;
+
+    if (!state.dragging) {
+      const dx = e.clientX - state.pressStartX;
+      const dy = e.clientY - state.pressStartY;
+      const movedEnough = dx * dx + dy * dy > 10 * 10;
+      if (movedEnough) {
+        cleanupPointerDrag(false);
+      }
+      return;
+    }
+
+    e.preventDefault();
+
+    const fromIndex = draggedIndexRef.current;
+    if (fromIndex === null) return;
+
+    const target = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+    const item = target?.closest("[data-onboarding-dnd-index]") as HTMLElement | null;
+    if (!item) return;
+
+    const toIndex = Number(item.dataset.onboardingDndIndex);
+    if (!Number.isFinite(toIndex) || toIndex === fromIndex) return;
+
+    reorderCharities(fromIndex, toIndex);
+    setDraggedIndex(toIndex);
+  }
+
+  function onWindowPointerUp(e: PointerEvent) {
+    const state = pointerDragRef.current;
+    if (state.pointerId === null || e.pointerId !== state.pointerId) return;
+    cleanupPointerDrag(state.dragging);
+  }
+
+  const handlePointerDown = (index: number, e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isCoarsePointer || !canReorderPriority) return;
+    if (e.pointerType === "mouse") return;
+
+    const state = pointerDragRef.current;
+    state.pointerId = e.pointerId;
+    state.element = e.currentTarget;
+    state.pressStartX = e.clientX;
+    state.pressStartY = e.clientY;
+    state.dragging = false;
+
+    if (state.pressTimer !== null) {
+      window.clearTimeout(state.pressTimer);
+    }
+
+    state.pressTimer = window.setTimeout(() => {
+      if (state.pointerId === null || state.element === null) return;
+      startPointerDrag(index, state.pointerId, state.element);
+    }, 150);
+
+    window.addEventListener("pointermove", onWindowPointerMove, {
+      passive: false,
+      capture: true,
+    });
+    window.addEventListener("pointerup", onWindowPointerUp, { capture: true });
+    window.addEventListener("pointercancel", onWindowPointerUp, { capture: true });
   };
 
   const handleContinue = async () => {
@@ -182,7 +373,7 @@ export default function OnboardingDonationModePage() {
     sessionStorage.removeItem("onboarding_charities");
     sessionStorage.removeItem("onboarding_goals");
     // Use full page navigation to ensure cookies from server action are properly handled
-    window.location.href = "/onboarding/plaid";
+    window.location.href = "/onboarding/plaid?steps=4";
   };
 
   const totalSteps = charities.length > 1 ? 4 : 3;
@@ -356,26 +547,29 @@ export default function OnboardingDonationModePage() {
               className="font-body text-sm"
               style={{ color: "var(--muted)" }}
             >
-              Drag to reorder. Donations fill goals from top to bottom.
+              Drag (or long-press on mobile) to reorder. Donations fill goals from top to bottom.
             </p>
           </div>
 
-          <div className="space-y-3">
-            {charities.map((item, index) => (
-              <div
-                key={item.charity.id}
-                draggable
-                onDragStart={() => handleDragStart(index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDragEnd={handleDragEnd}
-                className="flex items-center gap-4 p-4 cursor-move transition-all duration-200"
-                style={{
-                  backgroundColor: "var(--white)",
-                  border: draggedIndex === index ? "2px solid var(--green)" : "1px solid var(--border)",
-                  transform: draggedIndex === index ? "scale(1.02)" : "scale(1)",
-                  boxShadow: draggedIndex === index ? "0 4px 12px rgba(0,0,0,0.1)" : "none",
-                }}
-              >
+            <div className="space-y-3">
+              {charities.map((item, index) => (
+                <div
+                  key={item.charity.id}
+                  data-onboarding-dnd-index={index}
+                  draggable={!isCoarsePointer}
+                  onPointerDown={isCoarsePointer ? (e) => handlePointerDown(index, e) : undefined}
+                  onDragStart={!isCoarsePointer ? () => handleDragStart(index) : undefined}
+                  onDragOver={!isCoarsePointer ? (e) => handleDragOver(e, index) : undefined}
+                  onDragEnd={!isCoarsePointer ? handleDragEnd : undefined}
+                  className="flex items-center gap-4 p-4 cursor-move transition-all duration-200"
+                  style={{
+                    backgroundColor: "var(--white)",
+                    border: draggedIndex === index ? "2px solid var(--green)" : "1px solid var(--border)",
+                    transform: draggedIndex === index ? "scale(1.02)" : "scale(1)",
+                    boxShadow: draggedIndex === index ? "0 4px 12px rgba(0,0,0,0.1)" : "none",
+                    touchAction: isCoarsePointer && draggedIndex === index ? "none" : "auto",
+                  }}
+                >
                 {/* Priority Number */}
                 <div 
                   className="flex items-center justify-center w-8 h-8 font-mono text-sm"

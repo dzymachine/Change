@@ -91,7 +91,7 @@ export function CharityCard({
           opacity: isCompleted ? 0.7 : 1,
           borderRadius: "12px",
         }}
-        className={`p-4 flex flex-col min-h-[200px] select-none ${
+        className={`p-4 flex flex-col min-h-[220px] sm:min-h-[240px] select-none ${
           draggable 
             ? "cursor-grab active:cursor-grabbing" 
             : ""
@@ -177,7 +177,7 @@ export function CharityCard({
 
         {/* Header with image placeholder */}
         <div 
-          className="w-full h-20 mb-3 flex items-center justify-center overflow-hidden"
+          className="w-full h-24 sm:h-28 mb-3 flex items-center justify-center overflow-hidden"
           style={{ 
             background: hasImage ? "transparent" : "linear-gradient(135deg, rgba(162, 137, 108, 0.08) 0%, rgba(0, 122, 85, 0.05) 100%)",
             borderRadius: "8px",
@@ -466,14 +466,14 @@ export function CharityCard({
       </div>
 
       {/* Progress details - matching reference layout */}
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <span 
           className="font-body text-sm"
           style={{ color: "var(--foreground)" }}
         >
           ${clampedCurrentAmount.toFixed(2)} toward ${goalAmount.toFixed(2)}
         </span>
-        <div className="flex gap-6 text-right">
+        <div className="flex justify-between sm:justify-end gap-4 sm:gap-6 text-right">
           <div>
             <p 
               className="font-mono text-xs"

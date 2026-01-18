@@ -109,14 +109,14 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
 
   return (
       <div 
-        className="p-8"
+        className="p-4 sm:p-8"
         style={{
           backgroundColor: "var(--white)",
           border: "1px solid var(--border)",
           borderRadius: "12px",
         }}
       >
-        <div className="flex items-start justify-between mb-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-6 sm:mb-8">
           <div>
             <p 
               className="font-mono text-xs uppercase tracking-widest mb-2"
@@ -125,23 +125,23 @@ export function DonationChart({ totalDonated, donationHistory = [] }: DonationCh
               Total donated
             </p>
             <p 
-              className="font-display text-4xl"
+              className="font-display text-3xl sm:text-4xl"
               style={{ color: "var(--foreground)", fontWeight: 500 }}
             >
               ${totalDonated.toFixed(2)}
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="w-full sm:w-auto">
             <div 
-              className="flex items-center p-1"
+              className="flex items-center p-1 overflow-x-auto"
               style={{ backgroundColor: "rgba(162, 137, 108, 0.08)", borderRadius: "9999px" }}
             >
               {timeRanges.map((range) => (
                 <button
                   key={range}
                   onClick={() => setTimeRange(range)}
-                  className="px-3 py-1.5 font-mono text-xs transition-all duration-200"
+                  className="px-3 py-1.5 font-mono text-xs transition-all duration-200 shrink-0"
                   style={{
                     backgroundColor: timeRange === range ? "var(--white)" : "transparent",
                     color: timeRange === range ? "var(--foreground)" : "var(--muted)",
