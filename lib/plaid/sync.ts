@@ -48,6 +48,14 @@ export async function syncTransactionsForItem(
       item_id: itemId,
       error: fetchError?.message ?? fetchError ?? "unknown",
     });
+    await supabaseAdmin.from("plaid_sync_runs").insert({
+      trace_id: traceId,
+      item_id: itemId,
+      trigger: ctx?.trigger ?? null,
+      webhook_code: ctx?.webhook_code ?? null,
+      status: "error",
+      error: fetchError?.message ?? String(fetchError ?? "linked account not found"),
+    });
     return;
   }
 
@@ -112,12 +120,38 @@ export async function syncTransactionsForItem(
       has_more,
     });
 
+    await supabaseAdmin.from("plaid_sync_runs").insert({
+      trace_id: traceId,
+      item_id: itemId,
+      linked_account_id: linkedAccount.id,
+      user_id: linkedAccount.user_id,
+      trigger: ctx?.trigger ?? null,
+      webhook_code: ctx?.webhook_code ?? null,
+      cursor_present: Boolean(cursor),
+      added_count: added.length,
+      modified_count: modified.length,
+      removed_count: removed.length,
+      inserted_or_upserted: newTxCount,
+      has_more,
+      status: "ok",
+    });
+
     // Process donations for new settled transactions
     if (newTxCount > 0) {
       await processNewDonations(linkedAccount.user_id);
     }
   } catch (error) {
     logJson("error", "plaid.sync.error", { trace_id: traceId, item_id: itemId, error });
+    await supabaseAdmin.from("plaid_sync_runs").insert({
+      trace_id: traceId,
+      item_id: itemId,
+      linked_account_id: linkedAccount.id,
+      user_id: linkedAccount.user_id,
+      trigger: ctx?.trigger ?? null,
+      webhook_code: ctx?.webhook_code ?? null,
+      status: "error",
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 

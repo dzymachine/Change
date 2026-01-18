@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const userId = url.searchParams.get("user_id") || undefined;
   const itemId = url.searchParams.get("item_id") || undefined;
+  const excludeMock = url.searchParams.get("exclude_mock") === "true";
   const limitRaw = url.searchParams.get("limit");
   const limit = Math.max(
     1,
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
 
     if (userId) txQuery = txQuery.eq("user_id", userId);
     if (linkedAccountIds.length > 0) txQuery = txQuery.in("linked_account_id", linkedAccountIds);
+    if (excludeMock) txQuery = txQuery.not("plaid_transaction_id", "like", "mock_tx_%");
 
     const { data: transactions, error: txError } = await txQuery;
     if (txError) {
@@ -60,7 +62,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      filter: { user_id: userId ?? null, item_id: itemId ?? null, limit },
+      filter: { user_id: userId ?? null, item_id: itemId ?? null, limit, exclude_mock: excludeMock },
       linked_accounts: (accounts || []).map((a) => ({
         id: a.id,
         user_id: a.user_id,

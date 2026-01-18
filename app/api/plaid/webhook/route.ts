@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { syncTransactionsForItem } from "@/lib/plaid/sync";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logJson } from "@/lib/log-json";
+import { isDebugAuthorized } from "@/lib/debug-auth";
 
 // Plaid Webhook Types
 type PlaidWebhookType = 
@@ -63,6 +64,16 @@ export async function POST(request: NextRequest) {
       has_error: Boolean(body.error),
     });
 
+    // Persist webhook receipt for environments where logs aren't accessible (e.g., Vercel)
+    await supabaseAdmin.from("plaid_webhook_events").insert({
+      trace_id: logId,
+      item_id: body.item_id,
+      webhook_type: body.webhook_type,
+      webhook_code: body.webhook_code,
+      payload: body,
+      status: "received",
+    });
+
     // Add to in-memory log
     const logEntry: WebhookLogEntry = {
       id: logId,
@@ -110,6 +121,14 @@ export async function POST(request: NextRequest) {
       item_id: body.item_id,
       processing_ms: Date.now() - startTime,
     });
+
+    await supabaseAdmin
+      .from("plaid_webhook_events")
+      .update({
+        status: "processed",
+        processing_time_ms: Date.now() - startTime,
+      })
+      .eq("trace_id", logId);
     return NextResponse.json({ received: true, id: logId });
 
   } catch (error) {
@@ -126,6 +145,15 @@ export async function POST(request: NextRequest) {
       entry.error = error instanceof Error ? error.message : String(error);
       entry.processingTimeMs = Date.now() - startTime;
     }
+
+    await supabaseAdmin
+      .from("plaid_webhook_events")
+      .update({
+        status: "error",
+        error: error instanceof Error ? error.message : String(error),
+        processing_time_ms: Date.now() - startTime,
+      })
+      .eq("trace_id", logId);
     
     return NextResponse.json(
       { error: "Webhook processing failed", id: logId },
@@ -135,18 +163,30 @@ export async function POST(request: NextRequest) {
 }
 
 // GET endpoint to view webhook log (debug only)
-export async function GET() {
-  if (process.env.NODE_ENV !== "development") {
-    return NextResponse.json(
-      { error: "Not available in production" },
-      { status: 403 }
-    );
+export async function GET(request: NextRequest) {
+  // In production, allow viewing via DEBUG_API_TOKEN for troubleshooting.
+  if (!isDebugAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const url = new URL(request.url);
+  const limitRaw = url.searchParams.get("limit");
+  const limit = Math.max(1, Math.min(100, limitRaw ? Number.parseInt(limitRaw, 10) || 25 : 25));
+
+  const { data: events, error } = await supabaseAdmin
+    .from("plaid_webhook_events")
+    .select("trace_id, item_id, webhook_type, webhook_code, status, error, processing_time_ms, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    return NextResponse.json({ error: "Failed to fetch webhook events", details: error.message }, { status: 500 });
   }
 
   return NextResponse.json({
-    total: webhookLog.length,
-    webhooks: webhookLog,
-    note: "This log resets when the server restarts",
+    total: events?.length || 0,
+    events: events || [],
+    note: "Stored in Supabase (persistent)",
   });
 }
 
