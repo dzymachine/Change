@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { CharityCard } from "./CharityCard";
 import { AddCharityModal } from "./AddCharityModal";
 import {
@@ -27,19 +28,47 @@ interface CharitiesSectionProps {
   maxCharities?: number;
 }
 
+interface SimulateResult {
+  success: boolean;
+  transaction: {
+    merchant: string;
+    amount: number;
+    roundup: number;
+  };
+  donation: {
+    charity_name: string | null;
+  };
+}
+
 export function CharitiesSection({
   charities: initialCharities,
   donationMode: initialMode,
   maxCharities = 5,
 }: CharitiesSectionProps) {
+  const router = useRouter();
   const [mode, setMode] = useState(initialMode);
   const [charities, setCharities] = useState(initialCharities);
+
+  // Sync charities state when props change (e.g., after router.refresh())
+  useEffect(() => {
+    setCharities(initialCharities);
+  }, [initialCharities]);
+
+  // Sync mode state when props change
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
   const [urlMap, setUrlMap] = useState<Record<string, string>>({});
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+
+  // Simulate purchase state
+  const [showSimulateModal, setShowSimulateModal] = useState(false);
+  const [simulateAmount, setSimulateAmount] = useState("25.47");
   const [isSimulating, setIsSimulating] = useState(false);
+  const [simulateResult, setSimulateResult] = useState<SimulateResult | null>(null);
   const [simulateError, setSimulateError] = useState<string | null>(null);
 
   const activeCharities = charities.filter((c) => !c.isCompleted);
@@ -143,25 +172,48 @@ export function CharitiesSection({
   };
 
   const existingCharityIds = charities.map((c) => c.charityId);
-  const showDebug = process.env.NODE_ENV === "development";
 
-  const handleSimulateTransaction = async () => {
+  const calculateRoundup = (value: number) => {
+    if (isNaN(value) || value <= 0) return 0;
+    return Math.ceil(value) - value;
+  };
+
+  const handleSimulatePurchase = async () => {
+    const numAmount = parseFloat(simulateAmount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      setSimulateError("Please enter a valid amount");
+      return;
+    }
+
+    setSimulateError(null);
+    setSimulateResult(null);
+    setIsSimulating(true);
+
     try {
-      setIsSimulating(true);
-      setSimulateError(null);
-      const response = await fetch("/api/debug/simulate-transaction", {
+      const response = await fetch("/api/demo/simulate-purchase", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: numAmount }),
       });
+
+      const data = await response.json();
+
       if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || "Failed to simulate transaction");
+        throw new Error(data.error || "Failed to simulate purchase");
       }
-      window.location.reload();
-    } catch (error) {
-      setSimulateError(
-        error instanceof Error ? error.message : "Failed to simulate transaction"
-      );
-    } finally {
+
+      setSimulateResult(data);
+
+      // Refresh page and close modal after 2 seconds
+      setTimeout(() => {
+        router.refresh();
+        setShowSimulateModal(false);
+        setIsSimulating(false);
+        setSimulateResult(null);
+      }, 2000);
+
+    } catch (err) {
+      setSimulateError(err instanceof Error ? err.message : "Something went wrong");
       setIsSimulating(false);
     }
   };
@@ -211,21 +263,20 @@ export function CharitiesSection({
         </div>
 
         <div className="flex items-center gap-3">
-          {showDebug && (
-            <button
-              onClick={handleSimulateTransaction}
-              disabled={isSimulating}
-              className="flex items-center gap-2 px-4 py-2 font-body text-sm transition-all duration-200"
-              style={{
-                backgroundColor: "transparent",
-                border: "1px solid var(--border)",
-                color: "var(--muted)",
-                borderRadius: "9999px",
-              }}
-            >
-              {isSimulating ? "Simulating..." : "Simulate payment"}
-            </button>
-          )}
+          {/* Simulate Purchase button */}
+          <button
+            onClick={() => setShowSimulateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 font-body text-sm transition-all duration-200"
+            style={{
+              backgroundColor: "transparent",
+              border: "1px solid var(--border)",
+              color: "var(--muted)",
+              borderRadius: "9999px",
+            }}
+          >
+            Simulate payment
+          </button>
+
           {/* Active/Completed filter tiles */}
           <div 
             className="flex items-center p-1"
@@ -402,22 +453,185 @@ export function CharitiesSection({
           Drag to reorder priorities
         </p>
       )}
-      {simulateError && (
-        <p 
-          className="font-body text-xs text-center mt-2"
-          style={{ color: "var(--red)" }}
-        >
-          {simulateError}
-        </p>
-      )}
 
       {/* Add Charity Modal */}
-        <AddCharityModal
-          isOpen={showAddModal}
-          onClose={() => setShowAddModal(false)}
-          existingCharityIds={existingCharityIds}
-          onAddCharities={handleAddCharities}
-        />
+      <AddCharityModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        existingCharityIds={existingCharityIds}
+        onAddCharities={handleAddCharities}
+      />
+
+      {/* Simulate Purchase Modal */}
+      {showSimulateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => !isSimulating && setShowSimulateModal(false)}
+          />
+          <div 
+            className="relative w-full max-w-sm mx-4 p-8"
+            style={{
+              backgroundColor: "var(--white)",
+              border: "1px solid var(--border)",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+              borderRadius: "12px",
+            }}
+          >
+            <h3 
+              className="font-display text-xl mb-6"
+              style={{ color: "var(--foreground)", fontWeight: 500 }}
+            >
+              Simulate a Purchase
+            </h3>
+            
+            <div className="space-y-5">
+              <div>
+                <label 
+                  className="block font-body text-sm mb-2"
+                  style={{ color: "var(--muted)" }}
+                >
+                  Transaction Amount
+                </label>
+                <div className="relative">
+                  <span 
+                    className="absolute left-4 top-1/2 -translate-y-1/2"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    value={simulateAmount}
+                    onChange={(e) => setSimulateAmount(e.target.value)}
+                    min="0.01"
+                    step="0.01"
+                    className="w-full pl-8 pr-4 py-3 font-body text-base transition-all duration-200"
+                    style={{
+                      backgroundColor: "var(--white)",
+                      border: "1px solid var(--border)",
+                      color: "var(--foreground)",
+                      outline: "none",
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = "var(--green)";
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = "var(--border)";
+                    }}
+                    placeholder="25.47"
+                    disabled={isSimulating}
+                  />
+                </div>
+                <p 
+                  className="font-mono text-xs mt-2"
+                  style={{ color: "var(--muted)" }}
+                >
+                  Round-up will be: ${calculateRoundup(parseFloat(simulateAmount) || 0).toFixed(2)}
+                </p>
+              </div>
+
+              {/* Quick amount buttons */}
+              <div className="flex gap-2">
+                {[5.47, 12.89, 25.33, 47.62].map((quickAmount) => (
+                  <button
+                    key={quickAmount}
+                    onClick={() => setSimulateAmount(quickAmount.toString())}
+                    className="flex-1 py-2 font-mono text-sm transition-all duration-200"
+                    style={{
+                      backgroundColor: "transparent",
+                      border: "1px solid var(--border)",
+                      color: "var(--foreground)",
+                    }}
+                    disabled={isSimulating}
+                  >
+                    ${quickAmount}
+                  </button>
+                ))}
+              </div>
+
+              {/* Processing state */}
+              {isSimulating && !simulateResult && (
+                <div 
+                  className="p-3 font-body text-sm flex items-center gap-2"
+                  style={{ backgroundColor: "rgba(162, 137, 108, 0.08)" }}
+                >
+                  <div 
+                    className="w-4 h-4 border-2 border-t-transparent animate-spin rounded-full"
+                    style={{ borderColor: "var(--green)", borderTopColor: "transparent" }}
+                  />
+                  <span style={{ color: "var(--muted)" }}>Processing...</span>
+                </div>
+              )}
+
+              {/* Success result */}
+              {simulateResult && (
+                <div 
+                  className="p-3 font-body text-sm space-y-1"
+                  style={{ backgroundColor: "rgba(0, 122, 85, 0.08)" }}
+                >
+                  <div style={{ color: "var(--green)", fontWeight: 500 }}>
+                    Purchase simulated!
+                  </div>
+                  <div style={{ color: "var(--foreground)" }}>
+                    {simulateResult.transaction.merchant} — ${simulateResult.transaction.amount.toFixed(2)}
+                  </div>
+                  <div style={{ color: "var(--green)" }}>
+                    +${simulateResult.transaction.roundup.toFixed(2)} donated
+                    {simulateResult.donation.charity_name && ` to ${simulateResult.donation.charity_name}`}
+                  </div>
+                </div>
+              )}
+
+              {/* Error state */}
+              {simulateError && (
+                <div 
+                  className="p-3 font-body text-sm"
+                  style={{
+                    backgroundColor: "rgba(172, 52, 34, 0.08)",
+                    color: "var(--red)",
+                  }}
+                >
+                  {simulateError}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    setShowSimulateModal(false);
+                    setSimulateError(null);
+                    setIsSimulating(false);
+                    setSimulateResult(null);
+                  }}
+                  disabled={isSimulating && !simulateResult}
+                  className="flex-1 py-3 font-body text-sm transition-all duration-200 disabled:opacity-50"
+                  style={{
+                    backgroundColor: "transparent",
+                    border: "1px solid var(--border)",
+                    color: "var(--muted)",
+                    fontWeight: 500,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSimulatePurchase}
+                  disabled={isSimulating || !!simulateResult}
+                  className="flex-1 py-3 font-body text-sm transition-all duration-200 disabled:opacity-50"
+                  style={{
+                    backgroundColor: "var(--green)",
+                    color: "var(--white)",
+                    fontWeight: 500,
+                  }}
+                >
+                  {isSimulating ? "Processing..." : "Simulate"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

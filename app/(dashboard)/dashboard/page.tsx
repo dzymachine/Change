@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { CharitiesSection } from "@/components/dashboard/CharitiesSection";
 import { DonationChart } from "@/components/dashboard/DonationChart";
-import { SimulatePurchase } from "@/components/demo/SimulatePurchase";
 import type { DonationMode } from "@/types/database";
 
 export interface UserCharityGoal {
@@ -85,9 +84,6 @@ export default async function DashboardPage() {
 
       {/* Total Donated & Chart */}
       <DonationChart totalDonated={totalDonated} />
-
-      {/* Demo: Simulate Purchase - Small, at bottom */}
-      <SimulatePurchase />
     </div>
   );
 }
