@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { CharitiesSection } from "@/components/dashboard/CharitiesSection";
 import { DonationChart } from "@/components/dashboard/DonationChart";
+import { SimulatePurchase } from "@/components/demo/SimulatePurchase";
 import type { DonationMode } from "@/types/database";
 
 export interface UserCharityGoal {
@@ -75,6 +76,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Demo: Simulate Purchase - For hackathon demo */}
+      <SimulatePurchase />
+
       {/* Charities Section */}
       <CharitiesSection
         charities={charityGoals}
