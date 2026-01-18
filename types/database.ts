@@ -90,6 +90,9 @@ export interface Database {
           id: string;
           user_id: string;
           charity_id: string;
+          charity_name?: string | null;
+          charity_logo?: string | null;
+          charity_image_url?: string | null;
           goal_amount: number;
           current_amount: number;
           priority: number;
@@ -101,6 +104,9 @@ export interface Database {
           id?: string;
           user_id: string;
           charity_id: string;
+          charity_name?: string | null;
+          charity_logo?: string | null;
+          charity_image_url?: string | null;
           goal_amount: number;
           current_amount?: number;
           priority?: number;
@@ -112,6 +118,9 @@ export interface Database {
           id?: string;
           user_id?: string;
           charity_id?: string;
+          charity_name?: string | null;
+          charity_logo?: string | null;
+          charity_image_url?: string | null;
           goal_amount?: number;
           current_amount?: number;
           priority?: number;

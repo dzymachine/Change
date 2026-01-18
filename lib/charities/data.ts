@@ -8,6 +8,7 @@ export interface Charity {
   description: string;
   logo: string;
   imageUrl?: string;
+  charityUrl?: string;
 }
 
 /**

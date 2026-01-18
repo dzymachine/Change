@@ -5,6 +5,11 @@ interface GlobalGivingProject {
   id: string | number;
   title?: string;
   summary?: string;
+  projectLink?: unknown;
+  projectlink?: unknown;
+  projectUrl?: unknown;
+  url?: unknown;
+  websiteUrl?: unknown;
   imageLink?: string;
   image?: {
     imagelink?: Array<{ url?: string }> | string;
@@ -48,12 +53,36 @@ export async function GET() {
               }
             }
 
+            const pickLink = (value: unknown): string | undefined => {
+              if (typeof value === "string") {
+                return value;
+              }
+              if (value && typeof value === "object") {
+                const candidate = value as Record<string, unknown>;
+                const keys = ["url", "href", "link", "#text", "_"];
+                for (const key of keys) {
+                  if (typeof candidate[key] === "string") {
+                    return candidate[key] as string;
+                  }
+                }
+              }
+              return undefined;
+            };
+
+            const charityUrl =
+              pickLink(project.projectLink) ??
+              pickLink(project.projectlink) ??
+              pickLink(project.projectUrl) ??
+              pickLink(project.url) ??
+              pickLink(project.websiteUrl);
+
             return {
               id: String(project.id),
               name: project.title || project.organization?.name || "Untitled Project",
-              description: project.summary?.slice(0, 150) + "..." || "Supporting communities worldwide.",
+              description: project.summary || "Supporting communities worldwide.",
               logo: "🌍",
               imageUrl,
+              charityUrl,
               source: "globalgiving" as const,
             };
           });
@@ -89,6 +118,7 @@ export async function GET() {
     description: c.description || "",
     logo: c.logo || "🎯",
     imageUrl: c.logo_url,
+    charityUrl: c.website_url,
     source: "local" as const,
   }));
 

@@ -8,6 +8,7 @@ interface CharityCardProps {
   logo?: string;
   location?: string;
   imageUrl?: string | null;
+  charityUrl?: string;
   goalAmount: number;
   currentAmount: number;
   priority: number;
@@ -28,6 +29,7 @@ export function CharityCard({
   name,
   logo,
   imageUrl,
+  charityUrl,
   location = "Santa Cruz",
   goalAmount,
   currentAmount,
@@ -43,6 +45,7 @@ export function CharityCard({
 }: CharityCardProps) {
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [editGoal, setEditGoal] = useState(goalAmount.toFixed(2));
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const clampedCurrentAmount =
     goalAmount > 0 ? Math.min(currentAmount, goalAmount) : currentAmount;
@@ -103,16 +106,67 @@ export function CharityCard({
             : "border-gray-200 shadow-sm"
         } ${isCompleted ? "opacity-80" : ""}`}
       >
-        {/* Drag indicator for priority mode */}
-        {draggable && (
-          <div className="flex justify-center mb-2 transition-opacity duration-200">
-            <div className="flex gap-1 opacity-40 hover:opacity-70">
-              <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
-              <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
-              <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
-            </div>
+        {/* Menu */}
+        <div className="flex items-center justify-end mb-2">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen((open) => !open)}
+              className="p-1 rounded-md text-gray-500 hover:text-black hover:bg-gray-100"
+              aria-label="Charity options"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6h.01M12 12h.01M12 18h.01"
+                />
+              </svg>
+            </button>
+            {isMenuOpen && (
+              <div className="absolute right-0 z-10 mt-2 w-40 rounded-lg border border-gray-200 bg-white shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditingGoal(true);
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Edit goal
+                </button>
+                {onRemove && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      onRemove(id);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                  >
+                    Remove charity
+                  </button>
+                )}
+                {charityUrl && (
+                  <a
+                    href={charityUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Open charity page
+                  </a>
+                )}
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Header with image placeholder */}
         <div className="w-full h-20 rounded-lg bg-gradient-to-br from-gray-100 to-gray-50 mb-3 flex items-center justify-center overflow-hidden">
@@ -135,34 +189,60 @@ export function CharityCard({
         <h3 className="font-semibold text-black text-sm truncate">{name}</h3>
         <p className="text-xs text-gray-500 mb-3">{location}</p>
 
-        {/* Progress bar */}
-        <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-2 mt-auto">
-          <div
-            className="h-full rounded-full bg-emerald-500"
-            style={{ 
-              width: `${progress}%`,
-              transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
-            }}
-          />
-        </div>
+        {isEditingGoal ? (
+          <div className="mt-auto space-y-2">
+            <div className="relative">
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                $
+              </span>
+              <input
+                type="number"
+                value={editGoal}
+                onChange={(e) => setEditGoal(e.target.value)}
+                min="1"
+                step="0.01"
+                className="w-full pl-5 pr-2 py-1 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-emerald-500 text-black"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleGoalSave}
+                className="flex-1 py-1 text-xs rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditingGoal(false);
+                  setEditGoal(goalAmount.toFixed(2));
+                }}
+                className="flex-1 py-1 text-xs rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Progress bar */}
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-2 mt-auto">
+              <div
+                className="h-full rounded-full bg-emerald-500"
+                style={{ 
+                  width: `${progress}%`,
+                  transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+              />
+            </div>
 
-        {/* Progress info */}
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-gray-600 font-medium">{progressPercent}%</span>
-          <span className="text-black font-semibold">${clampedCurrentAmount.toFixed(2)} / ${goalAmount.toFixed(2)}</span>
-        </div>
-
-        {/* Remove button */}
-        {onRemove && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove(id);
-            }}
-            className="mt-3 w-full py-1.5 text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
-          >
-            Remove
-          </button>
+            {/* Progress info */}
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-600 font-medium">{progressPercent}%</span>
+              <span className="text-black font-semibold">${clampedCurrentAmount.toFixed(2)} / ${goalAmount.toFixed(2)}</span>
+            </div>
+          </>
         )}
       </div>
     );

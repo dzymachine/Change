@@ -4,6 +4,11 @@ type GlobalGivingProject = {
   id: string | number;
   title?: string;
   summary?: string;
+  projectLink?: unknown;
+  projectlink?: unknown;
+  projectUrl?: unknown;
+  url?: unknown;
+  websiteUrl?: unknown;
   image?: {
     imagelink?: unknown;
     thumbnaillink?: unknown;
@@ -95,12 +100,34 @@ export async function GET() {
       return undefined;
     };
 
+    const pickLink = (value: unknown): string | undefined => {
+      if (typeof value === "string") {
+        return value;
+      }
+      if (value && typeof value === "object") {
+        const candidate = value as Record<string, unknown>;
+        const keys = ["url", "href", "link", "#text", "_"];
+        for (const key of keys) {
+          if (typeof candidate[key] === "string") {
+            return candidate[key] as string;
+          }
+        }
+      }
+      return undefined;
+    };
+
     const charities = projects.map((project) => {
       const imageUrl =
         pickImageUrl(project.image?.imagelink) ??
         pickImageUrl(project.image?.thumbnaillink) ??
         pickImageUrl(project.imageLink) ??
         pickImageUrl(project.imageUrl);
+      const charityUrl =
+        pickLink(project.projectLink) ??
+        pickLink(project.projectlink) ??
+        pickLink(project.projectUrl) ??
+        pickLink(project.url) ??
+        pickLink(project.websiteUrl);
 
       return {
         id: String(project.id),
@@ -108,6 +135,7 @@ export async function GET() {
         description: project.summary ?? "No description available.",
         logo: "🌍",
         imageUrl,
+        charityUrl,
       };
     });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { CharityCard } from "./CharityCard";
 import { AddCharityModal } from "./AddCharityModal";
 import {
@@ -34,6 +34,7 @@ export function CharitiesSection({
 }: CharitiesSectionProps) {
   const [mode, setMode] = useState(initialMode);
   const [charities, setCharities] = useState(initialCharities);
+  const [urlMap, setUrlMap] = useState<Record<string, string>>({});
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const [showAddModal, setShowAddModal] = useState(false);
@@ -141,6 +142,31 @@ export function CharitiesSection({
 
   const existingCharityIds = charities.map((c) => c.charityId);
 
+  useEffect(() => {
+    let isMounted = true;
+    const fetchUrls = async () => {
+      try {
+        const response = await fetch("/api/charities");
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!Array.isArray(data.charities)) return;
+        const nextMap: Record<string, string> = {};
+        for (const charity of data.charities) {
+          if (typeof charity.id === "string" && typeof charity.charityUrl === "string") {
+            nextMap[charity.id] = charity.charityUrl;
+          }
+        }
+        if (isMounted) setUrlMap(nextMap);
+      } catch {
+        // Ignore URL lookup failures
+      }
+    };
+    fetchUrls();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -236,6 +262,7 @@ export function CharitiesSection({
             name={charity.name}
             logo={charity.logo}
             imageUrl={charity.imageUrl}
+            charityUrl={urlMap[charity.charityId]}
             goalAmount={charity.goalAmount}
             currentAmount={charity.currentAmount}
             priority={charity.priority}
