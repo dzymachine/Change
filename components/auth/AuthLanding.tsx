@@ -67,13 +67,25 @@ export function AuthLanding() {
       return;
     }
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    // ============================================================================
+    // EMAIL VERIFICATION TOGGLE
+    // ============================================================================
+    // To enable/disable email verification, go to Supabase Dashboard:
+    //   1. Authentication → Providers → Email
+    //   2. Toggle "Confirm email" on/off
+    //
+    // When ENABLED:  User receives confirmation email, session is null until confirmed
+    // When DISABLED: User is immediately signed in, session is returned
+    //
+    // This code handles both cases automatically.
+    // ============================================================================
+    
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        // After email confirmation, user will be redirected here
-        // Middleware will then redirect to onboarding since onboarding_completed is false
-        emailRedirectTo: `${window.location.origin}/`,
+        // Only used when email confirmation is enabled - redirects after confirming
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
@@ -83,6 +95,18 @@ export function AuthLanding() {
       return;
     }
 
+    // If email confirmation is DISABLED in Supabase, user is immediately signed in
+    // and we get a session back. Redirect them directly to the app.
+    if (data.session) {
+      router.refresh();
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 100);
+      return;
+    }
+
+    // If email confirmation is ENABLED, no session is returned.
+    // Show the "check your email" message.
     setSuccess(true);
     setLoading(false);
   }
