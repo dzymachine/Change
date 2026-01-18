@@ -65,14 +65,18 @@ export async function POST(request: NextRequest) {
     });
 
     // Persist webhook receipt for environments where logs aren't accessible (e.g., Vercel)
-    await supabaseAdmin.from("plaid_webhook_events").insert({
-      trace_id: logId,
-      item_id: body.item_id,
-      webhook_type: body.webhook_type,
-      webhook_code: body.webhook_code,
-      payload: body,
-      status: "received",
-    });
+    try {
+      await supabaseAdmin.from("plaid_webhook_events").insert({
+        trace_id: logId,
+        item_id: body.item_id,
+        webhook_type: body.webhook_type,
+        webhook_code: body.webhook_code,
+        payload: body,
+        status: "received",
+      });
+    } catch (persistError) {
+      logJson("warn", "plaid.webhook.persist_failed", { trace_id: logId, error: persistError });
+    }
 
     // Add to in-memory log
     const logEntry: WebhookLogEntry = {
@@ -122,13 +126,17 @@ export async function POST(request: NextRequest) {
       processing_ms: Date.now() - startTime,
     });
 
-    await supabaseAdmin
-      .from("plaid_webhook_events")
-      .update({
-        status: "processed",
-        processing_time_ms: Date.now() - startTime,
-      })
-      .eq("trace_id", logId);
+    try {
+      await supabaseAdmin
+        .from("plaid_webhook_events")
+        .update({
+          status: "processed",
+          processing_time_ms: Date.now() - startTime,
+        })
+        .eq("trace_id", logId);
+    } catch (persistError) {
+      logJson("warn", "plaid.webhook.persist_failed", { trace_id: logId, error: persistError });
+    }
     return NextResponse.json({ received: true, id: logId });
 
   } catch (error) {
@@ -146,14 +154,18 @@ export async function POST(request: NextRequest) {
       entry.processingTimeMs = Date.now() - startTime;
     }
 
-    await supabaseAdmin
-      .from("plaid_webhook_events")
-      .update({
-        status: "error",
-        error: error instanceof Error ? error.message : String(error),
-        processing_time_ms: Date.now() - startTime,
-      })
-      .eq("trace_id", logId);
+    try {
+      await supabaseAdmin
+        .from("plaid_webhook_events")
+        .update({
+          status: "error",
+          error: error instanceof Error ? error.message : String(error),
+          processing_time_ms: Date.now() - startTime,
+        })
+        .eq("trace_id", logId);
+    } catch (persistError) {
+      logJson("warn", "plaid.webhook.persist_failed", { trace_id: logId, error: persistError });
+    }
     
     return NextResponse.json(
       { error: "Webhook processing failed", id: logId },
@@ -180,7 +192,14 @@ export async function GET(request: NextRequest) {
     .limit(limit);
 
   if (error) {
-    return NextResponse.json({ error: "Failed to fetch webhook events", details: error.message }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Failed to fetch webhook events",
+        details: error.message,
+        hint: "If this is 'relation does not exist', apply supabase migration 20260118040000_014_plaid_event_logs.sql",
+      },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({
