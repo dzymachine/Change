@@ -23,6 +23,12 @@ type GlobalGivingProject = {
 const GLOBAL_GIVING_BASE =
   "https://api.globalgiving.org/api/public/projectservice/featured/projects";
 
+const FEATURED_IMAGE_OVERRIDES: Record<string, string> = {
+  "362": "https://www.globalgiving.org/pfil/50813/pict_large.jpg",
+  "593": "https://www.globalgiving.org/pfil/593/ph_593_134.jpg",
+  "898": "https://www.globalgiving.org/pfil/898/pict_large.jpg",
+};
+
 export async function GET() {
   const apiKey = process.env.GLOBALGIVING_API_KEY;
   if (!apiKey) {
@@ -151,12 +157,14 @@ export async function GET() {
         pickLink(project.url) ??
         pickLink(project.websiteUrl);
 
+      const overrideImageUrl = FEATURED_IMAGE_OVERRIDES[String(project.id)];
+
       return {
         id: String(project.id),
         name: project.title ?? project.organization?.name ?? "Untitled Project",
         description: project.summary ?? "No description available.",
         logo: "🌍",
-        imageUrl,
+        imageUrl: overrideImageUrl ?? imageUrl,
         charityUrl,
       };
     });

@@ -83,7 +83,15 @@ interface GlobalGivingProject {
 // Optional overrides for GlobalGiving images.
 // Key by GlobalGiving project ID (string), value is the image URL to display.
 const GLOBALGIVING_IMAGE_OVERRIDES: Record<string, string> = {
-  // "12345": "https://example.com/your-image.jpg",
+  "362": "https://www.globalgiving.org/pfil/50813/pict_large.jpg",
+  "593": "https://www.globalgiving.org/pfil/593/ph_593_134.jpg",
+  "898": "https://www.globalgiving.org/pfil/898/pict_large.jpg",
+  "624": "https://www.globalgiving.org/pfil/624/pict_large.jpg",
+  "714": "https://www.globalgiving.org/pfil/714/pict_large.jpg",
+  "1035": "https://www.globalgiving.org/pfil/1035/ph_1035_76148.jpg",
+  "736": "https://www.globalgiving.org/pfil/736/pict_large.jpg",
+  "921": "https://www.globalgiving.org/pfil/921/pict_large.jpg",
+  "354": "https://www.globalgiving.org/pfil/354/pict_large.jpg",
 };
 
 // Extract ALL matching categories for a project
