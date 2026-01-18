@@ -348,14 +348,6 @@ export function AuthLanding() {
         </button>
       </form>
 
-      {/* Footer accent */}
-      <div className="mt-16 flex justify-center">
-        <div 
-          className="w-8 h-8 rounded-full opacity-20"
-          style={{ backgroundColor: "var(--tan)" }}
-        />
-      </div>
-
       {/* Quick Login for Development */}
       {process.env.NODE_ENV === "development" && (
         <div 
