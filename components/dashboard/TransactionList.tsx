@@ -9,6 +9,8 @@ interface Transaction {
   amount: number;
   roundup_amount: number;
   date: string;
+  donated_to: string | null;
+  processed: boolean;
 }
 
 interface TransactionListProps {
@@ -74,9 +76,19 @@ export function TransactionList({ showAll = false }: TransactionListProps) {
           </div>
           <div className="text-right">
             <p className="font-medium text-black">{formatCurrency(tx.amount || 0)}</p>
-            <p className="text-sm text-emerald-600 font-medium">
-              +{formatCurrency(tx.roundup_amount || 0)} round-up
-            </p>
+            {tx.donated_to ? (
+              <p className="text-sm text-emerald-600 font-medium">
+                +{formatCurrency(tx.roundup_amount || 0)} donated
+              </p>
+            ) : tx.processed ? (
+              <p className="text-sm text-gray-400">
+                {formatCurrency(tx.roundup_amount || 0)} (paused)
+              </p>
+            ) : (
+              <p className="text-sm text-amber-600">
+                +{formatCurrency(tx.roundup_amount || 0)} pending
+              </p>
+            )}
           </div>
         </div>
       ))}

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { LinkBankButton } from "@/components/plaid/LinkBankButton";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { RoundupToggle } from "@/components/settings/RoundupToggle";
+import { ResetDemoDataButton } from "@/components/settings/ResetDemoDataButton";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -75,6 +76,16 @@ export default async function SettingsPage() {
           <RoundupToggle initialEnabled={roundupEnabled} />
         </div>
       </section>
+
+      {/* Demo Settings (Development Only) */}
+      {process.env.NODE_ENV !== "production" && (
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold text-black">Demo Settings</h2>
+          <div className="bg-white border rounded-xl p-5">
+            <ResetDemoDataButton />
+          </div>
+        </section>
+      )}
 
       {/* Sign Out */}
       <section className="space-y-4">
