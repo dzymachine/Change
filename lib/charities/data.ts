@@ -53,27 +53,19 @@ export interface Charity {
  */
 export const LOCAL_CHARITIES: Charity[] = [
   {
-    id: "native-animal-rescue",
-    name: "Native Animal Rescue",
-    description: "Wildlife rescue organization dedicated to the rehabilitation and release of injured, sick, and orphaned native animals in Santa Cruz County.",
-    logo: "",
-    imageUrl: "https://www.nativeanimalrescue.org/wp-content/uploads/2020/05/IMG_0867-Edit.jpg",
-    charityUrl: "https://www.nativeanimalrescue.org/",
-  },
-  {
     id: "volunteer-center-sc",
     name: "Volunteer Center of Santa Cruz County",
     description: "Connects volunteers with local opportunities, supports community programs, and strengthens nonprofit collaboration.",
     logo: "",
-    imageUrl: "https://scvolunteercenter.org/wp-content/uploads/2020/05/UCSC-tabling-copy-e1590897512731.png?w=1204&ssl=1",
+    imageUrl: "https://scvolunteercenter.org/wp-content/uploads/2024/12/IMG_8418.jpg",
     charityUrl: "https://scvolunteercenter.org/",
   },
   {
     id: "hopes-closet",
     name: "Hope's Closet",
-    description: "Community donation center providing clothing and goods to neighbors in need.",
+    description: "Community donation center providing clothing, household goods, and essential items to neighbors in need throughout Santa Cruz County.",
     logo: "",
-    imageUrl: "https://hopesclosetsc.org/wp-content/uploads/2024/06/Hop-C-Logo-Horizontal-300x100.png",
+    imageUrl: "https://www.hopesclosetsc.com/uploads/1/3/4/5/13456121/hc-infant-bundle_orig.jpg",
     charityUrl: "http://www.hopesclosetsc.com/",
   },
   {

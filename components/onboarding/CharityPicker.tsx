@@ -234,7 +234,7 @@ export function CharityPicker({ selected, onToggle }: CharityPickerProps) {
                 >
                   {charity.description}
                 </p>
-                {charity.description.length > 140 && (
+                {charity.description.length > 80 && (
                   <span
                     role="button"
                     tabIndex={0}
