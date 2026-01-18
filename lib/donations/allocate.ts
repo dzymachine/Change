@@ -68,7 +68,19 @@ export async function allocateRoundupToCharity(
     .order("priority", { ascending: true });
 
   if (charitiesError || !userCharities || userCharities.length === 0) {
-    return { success: false, error: "No active charities found" };
+    await supabaseAdmin
+      .from("transactions")
+      .update({
+        processed_for_donation: true,
+        donated_to_charity_id: null,
+      })
+      .eq("id", transactionId);
+
+    return {
+      success: true,
+      allocations: [],
+      unallocatedAmount: roundToCents(toNumber(roundupAmount)),
+    };
   }
 
   const mode = (profile.donation_mode === "random" ? "random" : "priority") as
@@ -151,7 +163,19 @@ export async function allocateRoundupToCharity(
   }
 
   if (allocations.length === 0) {
-    return { success: false, error: "No active charities found" };
+    await supabaseAdmin
+      .from("transactions")
+      .update({
+        processed_for_donation: true,
+        donated_to_charity_id: null,
+      })
+      .eq("id", transactionId);
+
+    return {
+      success: true,
+      allocations: [],
+      unallocatedAmount: roundToCents(toNumber(roundupAmount)),
+    };
   }
 
   // Mark transaction as processed

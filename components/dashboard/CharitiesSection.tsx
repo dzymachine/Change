@@ -218,6 +218,11 @@ export function CharitiesSection({
       </div>
 
       {/* Charities grid */}
+      {displayedCharities.length === 0 && (
+        <div className="col-span-full text-center text-sm text-gray-500 mb-2">
+          No charities selected yet. Add up to {maxCharities} to start tracking your goals.
+        </div>
+      )}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 transition-all duration-300">
         {displayedCharities.map((charity, index) => (
           <CharityCard
