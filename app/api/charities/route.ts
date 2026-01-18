@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { LOCAL_CHARITIES } from "@/lib/charities/data";
+import { HARDCODED_CHARITIES, LOCAL_CHARITIES } from "@/lib/charities/data";
 
 // Our 6 categories (Local is reserved for hardcoded charities)
 export const CHARITY_CATEGORIES = [
@@ -152,12 +152,41 @@ function processProject(project: GlobalGivingProject) {
   };
 }
 
+const MAX_GLOBALGIVING_PAGES = 3;
+const GLOBALGIVING_TIMEOUT_MS = 2500;
+
+function withTimeout(signal: AbortSignal, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  const onAbort = () => controller.abort();
+  signal.addEventListener("abort", onAbort);
+
+  const cleanup = () => {
+    clearTimeout(timeoutId);
+    signal.removeEventListener("abort", onAbort);
+  };
+
+  return { controller, cleanup };
+}
+
 /**
  * GET /api/charities
  * Fetches charities - tries GlobalGiving API first, falls back to Supabase
  */
 export async function GET() {
   const apiKey = process.env.GLOBALGIVING_API_KEY;
+  const localCharitiesWithCategory = LOCAL_CHARITIES.map((c) => ({
+    ...c,
+    categories: ["Local" as CharityCategory],
+    source: "local" as const,
+  }));
+
+  const curatedCharities = HARDCODED_CHARITIES.map((c) => ({
+    ...c,
+    categories: (c.categories || []) as CharityCategory[],
+    source: "local" as const,
+  }));
   
   if (apiKey) {
     try {
@@ -165,14 +194,20 @@ export async function GET() {
       // GlobalGiving returns some duplicates, so we deduplicate after fetching
       const allProjects: GlobalGivingProject[] = [];
       
-      for (let page = 0; page < 10; page++) {
+      for (let page = 0; page < MAX_GLOBALGIVING_PAGES; page++) {
         const startIndex = page * 10 + 1;
         const url = `https://api.globalgiving.org/api/public/projectservice/all/projects/active?api_key=${encodeURIComponent(apiKey)}&start=${startIndex}&numberOfProjects=10`;
-        
+        const requestController = new AbortController();
+        const { controller, cleanup } = withTimeout(
+          requestController.signal,
+          GLOBALGIVING_TIMEOUT_MS
+        );
+
         const response = await fetch(url, {
+          signal: controller.signal,
           next: { revalidate: 3600 },
           headers: { Accept: "application/json" },
-        });
+        }).finally(cleanup);
 
         if (!response.ok) break;
         
@@ -191,15 +226,12 @@ export async function GET() {
         
         const globalGivingCharities = uniqueProjects.map(processProject);
         
-        // Add local charities with "Local" category
-        const localCharitiesWithCategory = LOCAL_CHARITIES.map(c => ({
-          ...c,
-          categories: ["Local" as CharityCategory],
-          source: "local" as const,
-        }));
-        
-        // Combine: local charities first, then GlobalGiving
-        const allCharities = [...localCharitiesWithCategory, ...globalGivingCharities];
+        // Combine: local, curated, then GlobalGiving
+        const allCharities = [
+          ...localCharitiesWithCategory,
+          ...curatedCharities,
+          ...globalGivingCharities,
+        ];
         
         return NextResponse.json({ 
           charities: allCharities, 
@@ -207,8 +239,23 @@ export async function GET() {
           categories: CHARITY_CATEGORIES,
         });
       }
+
+      if (localCharitiesWithCategory.length || curatedCharities.length) {
+        return NextResponse.json({
+          charities: [...localCharitiesWithCategory, ...curatedCharities],
+          source: "local",
+          categories: CHARITY_CATEGORIES,
+        });
+      }
     } catch (error) {
       console.error("GlobalGiving API error:", error);
+      if (localCharitiesWithCategory.length || curatedCharities.length) {
+        return NextResponse.json({
+          charities: [...localCharitiesWithCategory, ...curatedCharities],
+          source: "local",
+          categories: CHARITY_CATEGORIES,
+        });
+      }
     }
   }
 

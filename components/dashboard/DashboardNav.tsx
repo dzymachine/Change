@@ -22,7 +22,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
     <nav className="w-64 border-r bg-gray-50 p-4 hidden lg:block relative">
       <div className="mb-8">
         <Link href="/dashboard" className="text-2xl font-bold text-emerald-600">
-          Change
+          Change.
         </Link>
       </div>
 

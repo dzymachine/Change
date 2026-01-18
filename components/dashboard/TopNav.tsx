@@ -13,7 +13,7 @@ export function TopNav() {
         prefetch={false}
         className="text-3xl font-extrabold tracking-tight text-black hover:text-emerald-600 transition-colors"
       >
-        Change
+        Change.
       </Link>
 
       <div className="flex items-center gap-2">
